@@ -41,34 +41,52 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    async function parsePhoneNumbers() {  
-      const input = phoneInput.value.trim();
-      if (!input) return;
-  
-      phoneNumbers = await Promise.all(    // <-- await Promise.all because map returns promises
-        input
-          .split(", ")
-          .filter((num) => num.trim())
-          .map(async (num) => {             
-              num = num.trim();
-              let status;
-              if (await existsWhatsapp(num)) {
-                  status = "exist";
-              } else {
-                  status = "not-exist";
-              }
-              return {
-                number: num,
-                status: status
-              };
-          })
-      );
-  
-      renderPhoneList();
-      phoneInputSection.classList.add("hidden");
-      phoneListSection.classList.remove("hidden");
-      updateSendButton();
-  }  
+    async function parsePhoneNumbers() {
+      const input = phoneInput.value.trim()
+      if (!input) return
+
+      // Step 1: create list immediately
+      phoneNumbers = input
+          .split(",")
+          .map(n => n.trim())
+          .filter(Boolean)
+          .map(n => ({
+              number: n,
+              status: "wait"
+          }))
+
+      renderPhoneList()
+      phoneInputSection.classList.add("hidden")
+      phoneListSection.classList.remove("hidden")
+
+      // Step 2: check WhatsApp existence ONE BY ONE
+      for (let i = 0; i < phoneNumbers.length; i++) {
+          const phone = phoneNumbers[i]
+
+          try {
+              const formData = new FormData()
+              formData.append("phone", phone.number)
+
+              const response = await fetch("/wa_exists_one/", {
+                  method: "POST",
+                  headers: {
+                      "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+                  },
+                  body: formData
+              })
+
+              const data = await response.json()
+              phoneNumbers[i].status = data.exists ? "exist" : "not-exist"
+          } catch {
+              phoneNumbers[i].status = "error"
+          }
+
+          renderPhoneList()
+      }
+
+      updateSendButton()
+    }
+
   
     function renderPhoneList() {
       phoneList.innerHTML = ""
@@ -92,23 +110,6 @@ document.addEventListener("DOMContentLoaded", () => {
         item.appendChild(statusSpan)
         phoneList.appendChild(item)
       })
-    }
-
-    async function existsWhatsapp(phone) {
-        try {
-          const response = await fetch(`/wa_exists/${phone}/`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-            }
-          });
-          const data = await response.json();
-          return data.existsWhatsapp;
-        } catch (error) {
-          alert('Something went wrong!');
-          return null; // or false
-        }
     }
   
     function getStatusText(status) {
@@ -159,43 +160,47 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   
     async function sendMessages() {
-      sendButton.disabled = true;
-      sendButton.innerText = "Отправка...";
+      sendButton.disabled = true
+      sendButton.innerText = "Отправка..."
 
-      const hasFile = fileInput.files.length > 0;
-      const formData = new FormData();
+      const file = fileInput.files[0] || null
 
-      formData.append('phoneNumbers', JSON.stringify(phoneNumbers));
-      formData.append('waText', messageInput.value);
+      for (let i = 0; i < phoneNumbers.length; i++) {
+          const phone = phoneNumbers[i]
 
-      if (hasFile) {
-          formData.append('file', fileInput.files[0]);
-      }
+          if (phone.status === "not-exist") continue
 
-      try {
-          const response = await fetch('/whatsapp/', {
-              method: 'POST',
-              headers: {
-                  'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-              },
-              body: formData
-          });
-  
-          if (!response.ok) {
-              throw new Error("HTTP error " + response.status);
+          phone.status = "wait"
+          renderPhoneList()
+
+          const formData = new FormData()
+          formData.append("number", phone.number)
+          formData.append("waText", messageInput.value)
+
+          if (file) {
+              formData.append("file", file)
           }
-  
-          const data = await response.json();
-          phoneNumbers = data.status_dict;
-          renderPhoneList();
 
-          alert("Сообщения отправлены!");
-      } catch (error) {
-          console.error('❌ Ошибка:', error);
-          alert('Произошла ошибка при отправке сообщений!');
-      } finally {
-          sendButton.disabled = false;
-          sendButton.innerText = "Отправить Сейчас";
+          try {
+              const response = await fetch("/whatsapp/send_one/", {
+                  method: "POST",
+                  headers: {
+                      "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
+                  },
+                  body: formData
+              })
+
+              const data = await response.json()
+              phoneNumbers[i].status = data.status
+          } catch {
+              phoneNumbers[i].status = "error"
+          }
+
+          renderPhoneList()
       }
-  }
+
+      sendButton.disabled = false
+      sendButton.innerText = "Отправить Сейчас"
+    }
+
 })

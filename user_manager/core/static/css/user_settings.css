@@ -225,7 +225,7 @@ input[type="date"] {
 }
 
 .btn-save {
-    background-color: #6200ee;
+    background-color: #E78324;
     color: white;
     transition: background-color 0.4s;
 }
@@ -242,7 +242,7 @@ input[type="date"] {
 }
 
 .btn-save:hover:not(:disabled) {
-    background-color: #7f38e2;
+    background-color: #C66306;
 }
 
 .btn-reset:hover:not(:disabled) {

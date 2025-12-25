@@ -5,10 +5,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Настройки Аккаунта</title>
-    <link rel="stylesheet" href="{% static 'user_manager/css/user_settings.css' %}">
+    <link rel="stylesheet" href="{% static 'css/user_settings.css' %}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <link rel="icon" href="{% static 'user_manager/favicon.png' %}">
+    <link rel="icon" href="{% static 'favicon.png' %}">
 </head>
 <body>
     <div class="container">
@@ -18,7 +18,7 @@
                 <p class="subtitle">Настройте профиль под себя</p>
             </div>
             <a href="{% url 'home' %}">
-                <img src="{% static 'user_manager/logocolor.svg' %}" alt="Logo" class="logo">
+                <img src="{% static 'logo.png' %}" alt="Logo" class="logo">
             </a>
         </div>
         
@@ -112,7 +112,7 @@
             </div>
 
             <div class="action-buttons">
-                <button type="button" class="btn btn-logout" onclick="window.location.href='{% url 'logout_user' prev_page='home' %}';">Выйти</button>
+                <button type="button" class="btn btn-logout" onclick="window.location.href='{% url 'logout_user' %}';">Выйти</button>
                 <div class="right-buttons">
                     <button type="button" class="btn btn-reset" disabled>Сбросить</button>
                     <button type="submit" class="btn btn-save" disabled>Сохранить</button>
@@ -132,11 +132,6 @@
         }; 
     </script>
     <script src="https://unpkg.com/imask"></script>
-    <!-- <script>
-        if (window.location.pathname.startsWith('/user_settings/')) {
-          window.history.replaceState(null, null, '/user_settings/');
-        }
-      </script> -->
-    <script src="{% static 'user_manager/js/user_settings.js' %}"></script>
+    <script src="{% static 'js/user_settings.js' %}"></script>
 </body>
 </html>
