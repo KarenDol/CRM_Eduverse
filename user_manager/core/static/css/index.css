@@ -1,0 +1,125 @@
+:root {
+    --white: #F7F8E2;
+    --primary: #F57B51;
+    --dark: #9CCD62;
+}
+
+* {
+    font-family: 'Montserrat', sans-serif;
+}
+
+header {
+    background-color: #E78324;
+    color: var(--white);
+    display: flex;
+    padding: 5px;
+    align-items: center;
+    width: 100%;
+    height: auto;
+    top: 0;
+    justify-content: space-between;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.AIS{
+    position: left;
+    margin-left: 10%;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+}
+
+.AIS .AIS-Text{
+    text-align: left;
+    position: right;
+}
+
+.AIS img{
+    margin-right: 10px;
+    height: 50px;
+    width: auto;
+    margin-top: 5px;
+}
+
+.AIS-Text p{
+    margin: 0px;
+}
+
+a{
+    color: var(--white);
+    text-decoration: none;
+}
+
+.Person{
+    position: right;
+    margin-right: 10%;
+    margin-top: 5px;
+    margin-bottom: 5px;
+    display: flex;
+    align-items: center;
+}
+
+.Person img{
+    border-radius: 50%;
+    height: 40px;
+    width: 40px;
+    margin-left: 10px;
+    object-fit: cover;
+}
+
+
+.spin {
+    animation: spin 2s linear forwards;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Message container styles */
+.message-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: 300px;
+    z-index: 1000;
+}
+
+/* Basic message styles */
+.message {
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    color: #fff;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: slideIn 0.5s ease;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateX(100%); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* Message types */
+.message-success { background-color: #4CAF50; }
+.message-error { background-color: #f44336; }
+.message-warning { background-color: #ff9800; }
+.message-info { background-color: #2196F3; }
+
+/* Close button */
+.message .close-btn {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+}

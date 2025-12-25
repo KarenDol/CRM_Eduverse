@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+{% extends 'index.html' %}
+{% block content %}
+{% load static %}
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WhatsApp Рассылка</title>
+  <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+</head>
+<body>
+  <div class="container">
+    <h1>WhatsApp Рассылка</h1>
+
+    <form id="send-form">
+      {% csrf_token %}
+      <div class="grid">
+        <!-- Left side - Phone numbers -->
+        <div class="card">
+          <div class="card-content">
+            <h2>Номера Телефонов</h2>
+
+            <div id="phone-input-section" class="space-y">
+              <div>
+                <label for="phone-numbers">Введите номера телефонов (без +, разделенные запятой и пробелом)</label>
+                <textarea id="phone-numbers" placeholder="77715053003, 77054002020, 77078001111" rows="6"></textarea>
+              </div>
+              <button type="button" id="parse-button" class="button primary" disabled>Извлечь Номера</button>
+            </div>
+
+            <div id="phone-list-section" class="space-y hidden">
+              <div id="phone-list" class="phone-list"></div>
+              <div class="button-group">
+                <button type="button" id="edit-numbers-button" class="button outline">Редактировать</button>
+                <button type="button" id="copy-numbers-button" class="button outline" title="Copy all phone numbers">Копировать</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right side - Message composition -->
+        <div class="card">
+          <div class="card-content">
+            <h2>Сообщение</h2>
+
+            <div class="space-y">
+              <div>
+                <label for="message">Текст сообщения</label>
+                <textarea id="message" placeholder="Type your message here..." rows="6"></textarea>
+              </div>
+
+              <div>
+                <label>Вложение</label>
+                <div class="file-upload">
+                  <button type="button" id="file-button" class="button outline">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="17 8 12 3 7 8"></polyline>
+                      <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span id="file-name">Загрузить файл</span>
+                  </button>
+                  <input type="file" id="file-input" class="hidden">
+                </div>
+              </div>
+
+              <button type="submit" id="send-button" class="button primary" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+                Отправить Сейчас
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+  <script src="{% static 'js/whatsapp.js' %}"></script>
+</body>
+</html>
+{% endblock content %}

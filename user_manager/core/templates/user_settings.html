@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Настройки Аккаунта</title>
+    <link rel="stylesheet" href="{% static 'user_manager/css/user_settings.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" href="{% static 'user_manager/favicon.png' %}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="title">
+                <h1>Изменить профиль</h1>
+                <p class="subtitle">Настройте профиль под себя</p>
+            </div>
+            <a href="{% url 'home' %}">
+                <img src="{% static 'user_manager/logocolor.svg' %}" alt="Logo" class="logo">
+            </a>
+        </div>
+        
+        <form id="profile-form">
+            {% csrf_token %}
+            <div class="bento-grid">
+                <div class="bento-item">
+                    <div class="avatar-container">
+                        <div class="avatar">
+                            <img alt="User Avatar" id="avatar-image">
+                            <div class="avatar-overlay">
+                                <i class="fas fa-plus"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <input type="file" id="file-Input" accept="image/*" hidden>
+                </div>
+                <div class="bento-item">
+                    <div class="user-details">
+                        <div class="form-group">
+                            <label for="username">Логин пользователя</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="username" disabled>
+                                <button type="button" class="edit-button" data-field="username">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Номер телефона</label>
+                            <div class="input-wrapper">
+                                <input type="tel" id="phone" placeholder="+7(___)___-____" disabled>
+                                <button type="button" class="edit-button" data-field="phone">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Почта</label>
+                            <div class="input-wrapper">
+                                <input type="email" id="email" placeholder="example@akbobek.kz" disabled>
+                                <button type="button" class="edit-button" data-field="email">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bento-item">
+                    <div class="form-group">
+                        <label>ФИО пользователя</label>
+                        <input type="text" value="{{ user_dict.name }}" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Позиция</label>
+                        <input type="text" value="{{ user_dict.position }}" disabled>
+                    </div>
+                </div>
+                
+                <div class="bento-item">
+                    <div class="form-group">
+                        <label for="old-password">Текущий пароль</label>
+                        <div class="password-input">
+                            <input type="password" id="old-password">
+                            <button type="button" class="password-toggle">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-password">Новый пароль</label>
+                        <div class="password-input">
+                            <input type="password" id="new-password">
+                            <button type="button" class="password-toggle">
+                                <svg viewBox="0 0 24 24">
+                                    <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons">
+                <button type="button" class="btn btn-logout" onclick="window.location.href='{% url 'logout_user' prev_page='home' %}';">Выйти</button>
+                <div class="right-buttons">
+                    <button type="button" class="btn btn-reset" disabled>Сбросить</button>
+                    <button type="submit" class="btn btn-save" disabled>Сохранить</button>
+                </div>
+            </div>
+        </form>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/inputmask/5.0.6-beta.31/jquery.inputmask.min.js"></script>
+    <script>
+        function fetchUserData() {
+            return {
+                username: '{{ user_dict.username|escapejs }}',
+                email: '{{ user_dict.email|escapejs }}',
+                phone: '{{ user_dict.phone|escapejs }}',
+                avatarSrc: '{{ user_dict.picture|escapejs }}'
+            };
+        }; 
+    </script>
+    <script src="https://unpkg.com/imask"></script>
+    <!-- <script>
+        if (window.location.pathname.startsWith('/user_settings/')) {
+          window.history.replaceState(null, null, '/user_settings/');
+        }
+      </script> -->
+    <script src="{% static 'user_manager/js/user_settings.js' %}"></script>
+</body>
+</html>
