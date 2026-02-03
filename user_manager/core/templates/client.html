@@ -1,0 +1,119 @@
+{% extends 'index.html' %}
+{% load static %}
+{% block content %}
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <link rel="stylesheet" href="{% static 'css/client.css' %}">
+  <!-- you can rename to client.css if you want -->
+  <link rel="icon" href="{% static 'user_manager/favicon.png' %}" />
+  <title>Клиент</title>
+</head>
+
+<body>
+  <div class="container">
+    <img src="{% static 'student_pic.jpg' %}">
+    <!-- Change action/url name to your real register client view -->
+    <form method="POST" action="{% url 'client_card' client_id=client_id %}" id="mainForm" novalidate>
+      {% csrf_token %}
+
+      <h2 class="edit">
+        Карточка клиента
+        <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" class="pen">
+          <path fill="currentColor"
+            d="M22 7.24a1 1 0 0 0-.29-.71l-4.24-4.24a1 1 0 0 0-.71-.29a1 1 0 0 0-.71.29l-2.83 2.83L2.29 16.05a1 1 0 0 0-.29.71V21a1 1 0 0 0 1 1h4.24a1 1 0 0 0 .76-.29l10.87-10.93L21.71 8a1.2 1.2 0 0 0 .22-.33a1 1 0 0 0 0-.24a.7.7 0 0 0 0-.14ZM6.83 20H4v-2.83l9.93-9.93l2.83 2.83ZM18.17 8.66l-2.83-2.83l1.42-1.41l2.82 2.82Z" />
+        </svg>
+      </h2>
+
+      <p class="desc" id="participant_id"></p>
+
+      <div class="status-bar">
+        <span class="status-btn lead" data-status="Лид">Лид</span>
+        <span class="status-btn subscribed" data-status="Акт">Подтвердил</span>
+        <span class="status-btn rejected" data-status="Арх">Отказ</span>
+
+        <input type="hidden" name="status" id="status">
+      </div>
+
+      <div class="form-control">
+        <label for="lastname">Фамилия</label>
+        <input type="text" id="lastname" name="last_name" maxlength="100" placeholder="Ex: Долмагамбетов...">
+        <i class="icon"></i>
+      </div>
+
+      <div class="form-control">
+        <label for="firstname">Имя</label>
+        <input type="text" id="firstname" name="first_name" maxlength="50" placeholder="Введите имя" autocomplete="off">
+        <i class="icon"></i>
+      </div>
+
+      <div class="form-control">
+        <label for="email">Email (необязательно)</label>
+        <input type="email" id="email" name="email" maxlength="100" placeholder="name@example.com" autocomplete="off">
+        <i class="icon"></i>
+      </div>
+
+      <div class="form-control">
+        <label for="phone" id="phone-label">Номер телефона</label>
+        <input type="tel" id="phone" name="phone">
+        <i class="icon"></i>
+      </div>
+
+      <div class="form-control">
+        <label for="grade">Класс (grade)</label>
+        <input type="tel" id="grade" name="grade" inputmode="numeric" placeholder="Напр: 7">
+        <i class="icon"></i>
+      </div>
+
+      <div class="form-control">
+        <label for="school">Школа</label>
+        <input type="text" id="school" name="school" maxlength="150" placeholder="Название школы" autocomplete="off">
+        <i class="icon"></i>
+      </div>
+
+      <div class="form-control">
+        <label for="results">Results</label>
+        <textarea id="results" name="results" rows="4" placeholder="Сюда можно сохранять результаты/JSON/текст"></textarea>
+        <i class="icon"></i>
+      </div>
+
+      <div class="form-control">
+        <label for="note">Note (необязательно)</label>
+        <textarea id="note" name="note" rows="3" placeholder="Заметки"></textarea>
+        <i class="icon"></i>
+      </div>
+
+      <div class="button-group" id="buttons_edit">
+        <button id="button_cancel">Отменить</button>
+        <button id="button_save">Сохранить</button>
+      </div>
+
+      <!-- Change back link to your clients list page if you have it -->
+      <button id="button_back"
+        onclick="event.preventDefault(); window.location.href='/'">
+        Назад
+      </button>
+    </form>
+  </div>
+
+  <script>
+    // Provide these from your Django view context:
+    // client_id = client.pk (or any id used in /card_client/<id>/)
+    const client_id = "{{ client_id|default:'' }}";
+
+    const clientJson = '{{ client|default:"null"|escapejs }}';
+    let client = null;
+    try {
+      client = JSON.parse(clientJson);
+    } catch (e) {
+      client = null;
+    }
+  </script>
+
+  <script src="{% static 'js/client.js' %}"></script>
+  <script src="https://unpkg.com/imask"></script>
+</body>
+
+{% endblock content %}

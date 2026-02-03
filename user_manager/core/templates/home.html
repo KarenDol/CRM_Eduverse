@@ -1,0 +1,85 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Главная</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/home.css' %}">
+</head>
+
+<body>
+    {% csrf_token %}
+    <main id="students_table">
+        <section class="table__header">
+            <p style="font-weight: bold;">Класс</p>
+            <div class="select-menu">
+                <div class="select-btn">
+                    <span class="sBtn-text">Все классы</span>
+                    <i class="fa-solid fa-chevron-down"></i>
+                </div>
+                <ul class="options"></ul>
+            </div>
+
+            <!-- <div class="checkbox-wrapper-35" id="switch-wrapper">
+                <input value="private" name="switch" id="switch" type="checkbox" class="switch">
+                <label for="switch">
+                <span class="switch-x-text">Sort by</span>
+                <span class="switch-x-toggletext">
+                    <span class="switch-x-unchecked"><span class="switch-x-hiddenlabel">Unchecked: </span>score</span>
+                    <span class="switch-x-checked"><span class="switch-x-hiddenlabel">Checked: </span>award</span>
+                </span>
+                </label>
+            </div> -->
+
+            <input type="hidden" name="grade" id="selectedClassInput">
+            <div class="input-group">
+                <input type="search" placeholder="Фамилия Имя...">
+                <img src="{% static 'search.png' %}" alt="" class="search-icon">
+            </div>
+
+            <div class="action-buttons">
+                <div class="whatsapp">
+                    <img class="whatsapp" id="whatsapp" src="{% static 'WhatsApp.webp' %}">
+                    <span class="tooltiptext">Ватсап рассылка</span>
+                </div>
+
+                <div class="register_student">
+                    <img class="register_student" id="register" src="{% static 'Add_Student.png' %}">
+                    <span class="tooltiptext">Добавить учеников</span>
+                </div>
+            </div>
+
+            <div class="icons-group" id="buttons_wa">
+                <button id="cancel"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><path fill="#DB0227" d="m8.4 16.308l3.6-3.6l3.6 3.6l.708-.708l-3.6-3.6l3.6-3.6l-.708-.708l-3.6 3.6l-3.6-3.6l-.708.708l3.6 3.6l-3.6 3.6zM12.003 21q-1.866 0-3.51-.708q-1.643-.709-2.859-1.924t-1.925-2.856T3 12.003t.709-3.51Q4.417 6.85 5.63 5.634t2.857-1.925T11.997 3t3.51.709q1.643.708 2.859 1.922t1.925 2.857t.709 3.509t-.708 3.51t-1.924 2.859t-2.856 1.925t-3.509.709"/></svg></button>
+                <button id="send"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><path fill="#3BEF69" d="M4 18.5v-5.154L9.846 12L4 10.654V5.5L19.423 12z"/></svg></button>
+            </div>
+        </section>
+        <section class="table__body">
+            <table>
+                <thead>
+                    <tr>
+                        <th id="checked"> # </th>
+                        <th> Фамилия Имя </th>
+                        <th> Школа </th>
+                        <th> Класс </th>
+                        <th> Результат </th>
+                        <th> Award </th>
+                    </tr>
+                </thead>
+                <tbody id="studentsTableBody">
+                </tbody>
+            </table>
+        </section>
+    </main>
+    <script>
+        var clients = JSON.parse('{{ clients|escapejs }}');
+        console.log(clients);
+    </script>
+    <script src="{% static 'js/api.js' %}"></script>
+    <script src="{% static 'js/api.js' %}"></script>
+    <script src="{% static 'js/home.js' %}"></script>
+</body>
+{% endblock content %}

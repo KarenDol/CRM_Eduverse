@@ -14,11 +14,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const sendButton = document.getElementById("send-button")
   
     // State
-    let phoneNumbers = []
+    // var phoneNumbers = JSON.parse('{{ phone_numbers|escapejs }}');
     let selectedFile = null
   
     // Initialize
     updateSendButton()
+    loadNumbers()
 
     // Event Listeners
     phoneInput.addEventListener("input", inputHandler)
@@ -64,15 +65,12 @@ document.addEventListener("DOMContentLoaded", () => {
           const phone = phoneNumbers[i]
 
           try {
-              const formData = new FormData()
-              formData.append("phone", phone.number)
-
               const response = await fetch("/wa_exists_one/", {
                   method: "POST",
                   headers: {
                       "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
                   },
-                  body: formData
+                  body: JSON.stringify({ phone: phone.number }),
               })
 
               const data = await response.json()
@@ -145,6 +143,11 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => {
         copyNumbersButton.textContent = originalText
       }, 2000)
+    }
+
+    function loadNumbers() {
+      phoneInput.value = phoneNumbers.join(', ')
+      inputHandler()
     }
   
     function handleFileChange(e) {

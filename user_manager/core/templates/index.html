@@ -11,10 +11,10 @@
 <body>
     <header>
         <div class="AIS">
-            <img id="logo" src="{% static 'logo.png' %}">
+            <a href="{% url 'home' %}"><img id="logo" src="{% static 'logo.png' %}"></a>
             <div class="AIS-Text">
-                <p><a href="{% url 'home' %}"><b id="school">EDUVERSE KZ</b></a></p>
-                <p>Client Relationship Model</p>
+                <p id="productName"></p>
+                <p id="productDesc"></p>
             </div>
         </div>
         <div class="Person">
@@ -39,6 +39,28 @@
         .catch(error => console.error('Error fetching user info:', error));
     </script>
     <div class="message-container"></div>
+    <script>
+        const productName = document.getElementById('productName');
+        const productDesc = document.getElementById('productDesc');
+        const chosenPoduct = localStorage.getItem("chosenProduct")
+        if (chosenPoduct) {
+            productName.innerHTML = `<b>${chosenPoduct}</b>`;
+
+             productDesc.innerHTML = `
+                <span style="cursor:pointer; color:#0a58ca;" id="backToProducts">
+                    ← Back to Products
+                </span>
+            `;
+
+            document.getElementById("backToProducts").addEventListener("click", () => {
+                localStorage.removeItem("chosenProduct");
+                window.location.href = "/products";
+            });
+        } else {
+            productName.innerHTML = "<b>EDUVERSE KZ</b>";
+            productDesc.textContent = "Client Relationship Model";
+        }
+    </script>
     <script>
         // Function to show a message
         function showMessage(type, text) {

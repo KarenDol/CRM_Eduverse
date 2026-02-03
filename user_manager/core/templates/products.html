@@ -1,0 +1,19 @@
+{% extends 'index.html' %}
+{% block content %}
+{% load static %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products</title>
+    <link rel="stylesheet" href="{% static 'css/products.css' %}">
+</head>
+<body>
+    <div class="container">
+        <div id="productsContainer" class="products-grid">
+            <div class="loading">Loading products...</div>
+        </div>
+    </div>
+
+    <script src="{% static 'js/products.js' %}"></script>
+</body>
+{% endblock content %}
