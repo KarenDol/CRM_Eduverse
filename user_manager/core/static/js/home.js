@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     selectBtn = selectMenu.querySelector(".select-btn"),
     optionsContainer = selectMenu.querySelector(".options"),
     sBtn_text = selectMenu.querySelector(".sBtn-text");
+    const email = document.querySelector('.email svg')
     const whatsapp = document.getElementById('whatsapp');
     const checked = document.getElementById('checked');
     let checked_state = false;
@@ -52,7 +53,26 @@ document.addEventListener('DOMContentLoaded', async function() {
             rowId(student) { return student.id; },
             hasCheckbox: false,
         },
-
+        EMAIL: {
+            optionsDict: status_dict,
+            show: { buttons_wa: true, actionButtons: false },
+            headings: ["[_]", "Фамилия", "Имя", "Класс", "Школа", "e-mail"],
+            async getRows(selected) {
+            return clients.filter(s => s.status === selected);
+            },
+            rowHtml(student) {
+            return `
+                <td><input type="checkbox"></td>
+                <td>${student.last_name}</td>
+                <td>${student.first_name}</td>
+                <td>${student.school}</td>
+                <td>${student.grade}</td>
+                <td>${student.email}</td>
+            `;
+            },
+            rowId(student) { return student.id; },
+            hasCheckbox: true,
+        }, 
         WHATS_APP: {
             optionsDict: status_dict,
             show: { buttons_wa: true, actionButtons: false },
@@ -136,7 +156,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         table_headings[0].removeEventListener('click', checkedHandler);
 
         // only checkbox modes
-        if (state.mode === "ADD_MODE" || state.mode === "WHATS_APP") {
+        if (state.mode === "ADD_MODE" || state.mode === "WHATS_APP" || state.mode === "EMAIL") {
             table_headings[0].addEventListener('click', checkedHandler);
         }
 
@@ -157,6 +177,10 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     whatsapp.addEventListener("click", async () => {
         await setMode("WHATS_APP", state.selected);
+    });
+
+    email.addEventListener("click", async () => {
+        await setMode("EMAIL", state.selected);
     });
 
     cancel.addEventListener("click", async () => {
@@ -344,6 +368,33 @@ document.addEventListener('DOMContentLoaded', async function() {
                 })
                 .then(data => {
                     window.location.href = "/whatsapp";
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Произошла ошибка!');
+                });
+                break;
+            }
+            case "EMAIL": {
+                fetch('/clients/get_emails', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value // Include CSRF token if using Django
+                    },
+                    body: JSON.stringify({ 
+                        checkedClients: checkedStudents,
+                    })
+                })
+                .then(async (res) => {
+                    if (!res.ok) {
+                        const text = await res.text().catch(() => '');
+                        throw new Error(`HTTP ${res.status}. ${text}`);
+                    }
+                    return res.json().catch(() => ({}));
+                })
+                .then(data => {
+                    window.location.href = "http://localhost:3000";
                 })
                 .catch(error => {
                     console.error('Error:', error);

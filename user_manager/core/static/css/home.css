@@ -442,13 +442,13 @@ textarea{
     transition: opacity 0.3s;
 }
 
-.whatsapp, .export, .register_student{
+.whatsapp, .email, .register_student{
     position: relative; /* Ensures tooltip positions relative to this */
     cursor: pointer;
 }
 
 .whatsapp:hover .tooltiptext, 
-.export:hover .tooltiptext,
+.email:hover .tooltiptext,
 .register_student:hover .tooltiptext{
     visibility: visible;
     opacity: 1;

@@ -2,9 +2,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
 from django.core.files.storage import FileSystemStorage
+from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from django.forms.models import model_to_dict
-from django.http import FileResponse, Http404, HttpResponse, JsonResponse, HttpResponseNotAllowed
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse, HttpResponseNotAllowed, HttpResponseBadRequest
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from django.views.decorators.csrf import csrf_exempt
 from .models import *
 import requests
@@ -14,16 +17,16 @@ import re
 from django.views.decorators.http import require_GET, require_POST
 from .bestys_api import *
 from django.db import transaction
-
+import uuid
 
 def home(request):
     product_id = request.session.get("product_id")
+    if not request.user.is_authenticated:
+        return redirect('login_user')
+    
     if not product_id:
         messages.warning(request, "Сначала выберите продукт")
         return redirect("products")
-    
-    if not request.user.is_authenticated:
-        return redirect('login_user')
     
     deals = (
         Deal.objects
@@ -182,6 +185,16 @@ def whatsapp(request):
     
     return render(request, 'whatsapp.html', context)
 
+def normalize_kz_phone(raw):
+    digits = re.sub(r"\D", "", raw or "")
+    if len(digits) == 11 and digits.startswith("77"):
+        return digits
+    if len(digits) == 11 and digits.startswith("87"):
+        return "7" + digits[1:]
+    if len(digits) == 10 and digits.startswith("7"):
+        return "7" + digits
+    return None
+
 def get_numbers(request):
     if request.method == 'POST':
         try:
@@ -197,6 +210,11 @@ def get_numbers(request):
                     phone = client.phone
 
                     phone = re.sub(r'[^\d]', '', phone)  # Keeps only digits
+                    
+                    phone = normalize_kz_phone(phone)
+                    if not phone:
+                        continue
+
                     phone_numbers.append(phone)
                 except Client.DoesNotExist:
                     continue
@@ -210,9 +228,47 @@ def get_numbers(request):
             return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
     return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
+
+def get_emails(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            
+            checked_clients = data.get('checkedClients', [])
+            emails = []
+            print(f"Checked clients: {checked_clients}")
+
+            for client_id in checked_clients:
+                try:
+                    client = Client.objects.get(id=client_id)
+                    email = client.email
+            
+                    if not email:
+                        continue
+
+                    emails.append(email)
+                except Client.DoesNotExist:
+                    continue
+
+            request.session['emails'] = emails  
+            print(emails) 
+            
+            return JsonResponse({'status': 'success', 'message': 'Data received successfully'})
+        
+        except json.JSONDecodeError:
+            return JsonResponse({'status': 'error', 'message': 'Invalid JSON data'}, status=400)
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
+
 def send_one_whatsapp(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
+    
+    WhatsAppAccount = get_WhatsAppAccount(request)
+    if WhatsAppAccount == None:
+        return JsonResponse({"error": "WhatsAppAccount is not connected"}, status=400)
+    
+    idInstance = WhatsAppAccount['idInstance']
+    apiTokenInstance = WhatsAppAccount['apiTokenInstance']
 
     phone = request.POST.get("number")
     wa_text = request.POST.get("waText")
@@ -223,14 +279,66 @@ def send_one_whatsapp(request):
 
     try:
         if file:
-            return send_file_single(phone, wa_text, file)
+            return send_file_single(phone, wa_text, file, idInstance, apiTokenInstance)
         else:
-            return send_text_single(phone, wa_text)
+            return send_text_single(phone, wa_text, idInstance, apiTokenInstance)
     except Exception:
         return JsonResponse({"number": phone, "status": "error"})
+    
 
-def send_text_single(phone, wa_text):
-    url = "https://7103.api.greenapi.com/waInstance7103440972/sendMessage/7833fac0e9ec4bf3b114d58c87411cec62e741f5c31c452885"
+def send_email(request):
+    if request.method != "POST":
+        return JsonResponse(
+            {"status": "error", "message": "Invalid request method"},
+            status=400
+        )
+
+    try:
+        data = json.loads(request.body)
+
+        to_email = data.get("email")
+        html_content = data.get("html")
+        subject = data.get("subject", "Новое письмо | Eduverse")
+
+        if not to_email or not html_content:
+            return JsonResponse(
+                {"status": "error", "message": "Missing email or html"},
+                status=400
+            )
+
+        from_email = "support@eduverse.kz"
+        text_content = strip_tags(html_content)
+
+        email = EmailMultiAlternatives(
+            subject,
+            text_content,
+            from_email,
+            [to_email],
+        )
+
+        email.attach_alternative(html_content, "text/html")
+        email.send()
+
+        return JsonResponse({
+            "status": "sent",
+            "message": "Email sent successfully"
+        })
+
+    except json.JSONDecodeError:
+        return JsonResponse(
+            {"status": "error", "message": "Invalid JSON"},
+            status=400
+        )
+
+    except Exception as e:
+        return JsonResponse(
+            {"status": "error", "message": str(e)},
+            status=500
+        )
+
+
+def send_text_single(phone, wa_text, idInstance, apiTokenInstance):
+    url = f"https://7103.api.greenapi.com/waInstance{idInstance}/sendMessage/{apiTokenInstance}"
     payload = {
         "chatId": f"{phone}@c.us",
         "message": wa_text
@@ -239,8 +347,8 @@ def send_text_single(phone, wa_text):
     requests.post(url, json=payload, timeout=15).raise_for_status()
     return JsonResponse({"number": phone, "status": "sent"})
 
-def send_file_single(phone, wa_text, file):
-    url = "https://7103.media.greenapi.com/waInstance7103440972/sendFileByUpload/7833fac0e9ec4bf3b114d58c87411cec62e741f5c31c452885"
+def send_file_single(phone, wa_text, file, idInstance, apiTokenInstance):
+    url = f"https://7103.media.greenapi.com/waInstance{idInstance}/sendFileByUpload/{apiTokenInstance}"
 
     payload = {
         "chatId": f"{phone}@c.us",
@@ -257,15 +365,21 @@ def send_file_single(phone, wa_text, file):
 
 @require_POST
 def wa_exists(request):
+    WhatsAppAccount = get_WhatsAppAccount(request)
+    if WhatsAppAccount == None:
+        return JsonResponse({"error": "WhatsAppAccount is not connected"}, status=400)
+    
+    idInstance = WhatsAppAccount['idInstance']
+    apiTokenInstance = WhatsAppAccount['apiTokenInstance']
+    
     data = json.loads(request.body)
     phone = data.get("phone")
     if not phone:
         return JsonResponse({"error": "Missing phone"}, status=400)
 
     phone = re.sub(r"[^\d]", "", phone)
-    print(phone)
 
-    url = "https://7103.api.greenapi.com/waInstance7103440972/checkWhatsapp/7833fac0e9ec4bf3b114d58c87411cec62e741f5c31c452885"
+    url = f"https://7103.api.greenapi.com/waInstance{idInstance}/checkWhatsapp/{apiTokenInstance}"
 
     payload = { "phoneNumber": phone }
     headers = { "Content-Type": "application/json" }
@@ -273,7 +387,7 @@ def wa_exists(request):
     try:
         response = requests.post(url, json=payload, headers=headers, timeout=15)
         data = response.json()
-        print(data)
+
         return JsonResponse({
             "number": phone,
             "exists": data.get("existsWhatsapp", False)
@@ -283,8 +397,27 @@ def wa_exists(request):
             "number": phone,
             "exists": False
         })
+
+def get_WhatsAppAccount(request):
+    if not request.user.is_authenticated:
+        return None
     
+    crm_user = CRM_User.objects.get(user=request.user)
+    phone = crm_user.phone
+
+    try:
+        whatsapp = WhatsAppAccount.objects.get(phone=phone)
+        idInstance = whatsapp.idInstance
+        apiTokenInstance = whatsapp.apiTokenInstance
+        return {'idInstance': idInstance, 'apiTokenInstance': apiTokenInstance}
+    
+    except WhatsAppAccount.DoesNotExist:
+        return None
+
 def products(request):
+    if not request.user.is_authenticated:
+        return redirect('login_user')
+    
     request.session.pop("product_id", None)
     return render(request, 'products.html')
 
@@ -499,3 +632,33 @@ def client_card(request, client_id):
             'client': clientJson,
         }
         return render(request, "client.html", context)
+    
+@csrf_exempt  
+@require_POST
+def saveHTML(request):
+    try:
+        payload = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return HttpResponseBadRequest("Invalid JSON")
+
+    html = payload.get("html")
+    title = payload.get("title", "") or ""
+
+    if not isinstance(html, str) or not html.strip():
+        return HttpResponseBadRequest("Field 'html' is required")
+
+    obj = EmailTemplate.objects.create(html=html, title=title)
+    return JsonResponse({"uuid": str(obj.uuid)})
+
+
+def email_open(request, email_id):
+    email = EmailTemplate.objects.get(uuid=email_id)
+    list_of_emails = request.session.get('emails') or []
+    print('LIST OF EMAILS')
+    print(list_of_emails)
+    context = {
+        "email_html": json.dumps(email.html),
+        "list_of_emails": json.dumps(list_of_emails),
+    }
+
+    return render(request, "email.html", context)

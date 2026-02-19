@@ -22,6 +22,11 @@ urlpatterns = [
     path("whatsapp/", views.whatsapp, name="whatsapp"),
     path("whatsapp/send_one/", views.send_one_whatsapp, name="send_one_whatsapp"),
 
+    #Email,
+    path("email/open/<email_id>", views.email_open, name="email_open"),
+    path("email/saveHTML", views.saveHTML, name="saveHTML"),
+    path("email/send", views.send_email, name="send_email"),
+
     #Products
     path("products", views.products, name="products"),
     path("products/select", views.select_product, name="select_product"),
@@ -35,4 +40,5 @@ urlpatterns = [
     #Clients
     path("client/<client_id>", views.client_card, name="client_card"),
     path("clients/get_numbers", views.get_numbers, name="get_numbers"),
+    path("clients/get_emails", views.get_emails, name="get_emails"),
 ]
