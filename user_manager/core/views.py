@@ -597,14 +597,11 @@ def add_clients(request):
             client = Client.objects.filter(participant_id=participant_id).first()
             if not client:
                 client = Client.objects.create(
-                    participant_id=participant_id,
-                    user_id=registrant_card.get('userId'),
                     first_name=registrant_card.get('name', ''),
                     last_name=registrant_card.get('surname', ''),
                     email=registrant_card.get('email', ''),
                     phone=formatted_phone,
                     grade=registrant_card.get('grade', ''),
-                    school=registrant_card.get('school', ''),
                     countryId=registrant_card.get('countryId'),
                 )
                 created_clients += 1

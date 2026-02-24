@@ -25,7 +25,6 @@ class Product(models.Model):
 
 class Client(models.Model):
     participant_id = models.IntegerField()
-    user_id = models.IntegerField(null=True, blank=True)  # bestys userId for get/account/detail
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=100)
     email = models.CharField(max_length=100, null=True)
