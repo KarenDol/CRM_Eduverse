@@ -16,6 +16,10 @@ urlpatterns = [
     #BESTYS API
     path('api/competitions/get/', bestys_api.get_competitions, name='get_competitions'),
     path('api/competitions/results/<int:competition_id>', bestys_api.get_results, name='get_results'),
+    path('eduverse/token/', bestys_api.eduverse_token, name='eduverse_token'),
+    path('eduverse/participant-token/<int:user_id>/', bestys_api.eduverse_participant_token, name='eduverse_participant_token'),
+    path('eduverse/participant/<int:participant_id>/', bestys_api.open_eduverse_participant, name='open_eduverse_participant'),
+    path('eduverse/participant-search/', bestys_api.eduverse_participant_search, name='eduverse_participant_search'),
 
     #WhatsApp
     path("wa_exists_one/", views.wa_exists, name="wa_exists"),

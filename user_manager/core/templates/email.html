@@ -6,13 +6,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WhatsApp Рассылка</title>
+  <title>Email Рассылка</title>
   <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
 </head>
 <body>
   <div class="container">
-    <h1>WhatsApp Рассылка</h1>
+    <h1>Email Рассылка</h1>
 
     <form id="send-form">
       {% csrf_token %}
@@ -20,14 +20,14 @@
         <!-- Left side - Phone numbers -->
         <div class="card">
           <div class="card-content">
-            <h2>Номера Телефонов</h2>
+            <h2>Emails</h2>
 
             <div id="phone-input-section" class="space-y">
               <div>
-                <label for="phone-numbers">Введите номера телефонов (без +, разделенные запятой и пробелом)</label>
-                <textarea id="phone-numbers" placeholder="77715053003, 77054002020, 77078001111" rows="6"></textarea>
+                <label for="phone-numbers">Введите email адреса (разделенные запятой и пробелом)</label>
+                <textarea id="phone-numbers" placeholder="john.doe@gmail.com, superdana@mail.ru, donie@company.org" rows="6"></textarea>
               </div>
-              <button type="button" id="parse-button" class="button primary" disabled>Извлечь Номера</button>
+              <button type="button" id="parse-button" class="button primary" disabled>Извлечь Emails</button>
             </div>
 
             <div id="phone-list-section" class="space-y hidden">
@@ -45,6 +45,16 @@
           <div class="card-content">
             <h2>E-mail</h2>
 
+            <div>
+              <label for="email-subject">Тема письма</label>
+              <input 
+                type="text" 
+                id="email-subject" 
+                placeholder="Например: Новая заявка | Eduverse"
+                class="editor"
+              >
+            </div>
+
             <div class="space-y">
               <div>
                 <label for="message">Текст письма</label>
@@ -55,18 +65,17 @@
               </div>
 
               <div>
-                <label>Вложение</label>
+                <label>Вложения</label>
+
                 <div class="file-upload">
                   <button type="button" id="file-button" class="button outline">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                      <polyline points="17 8 12 3 7 8"></polyline>
-                      <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg>
-                    <span id="file-name">Загрузить файл</span>
+                    <span id="file-name">Добавить файлы</span>
                   </button>
-                  <input type="file" id="file-input" class="hidden">
+
+                  <input type="file" id="file-input" class="hidden" multiple>
                 </div>
+
+                <div id="files-list" style="margin-top:10px;"></div>
               </div>
 
               <button type="submit" id="send-button" class="button primary" disabled>

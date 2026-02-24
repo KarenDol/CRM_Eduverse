@@ -18,6 +18,7 @@ from django.views.decorators.http import require_GET, require_POST
 from .bestys_api import *
 from django.db import transaction
 import uuid
+import traceback
 
 def home(request):
     product_id = request.session.get("product_id")
@@ -39,7 +40,7 @@ def home(request):
     clients_data = [
         {
             **model_to_dict(d.client, fields=[
-                "id", "participant_id", "first_name", "last_name", "email",
+                "id", "participant_id", "user_id", "first_name", "last_name", "email",
                 "phone", "grade", "school", "countryId", "results", "note"
             ]),
             "status": d.status,  
@@ -284,58 +285,104 @@ def send_one_whatsapp(request):
             return send_text_single(phone, wa_text, idInstance, apiTokenInstance)
     except Exception:
         return JsonResponse({"number": phone, "status": "error"})
-    
 
+
+@csrf_exempt
 def send_email(request):
     if request.method != "POST":
-        return JsonResponse(
-            {"status": "error", "message": "Invalid request method"},
-            status=400
-        )
+        return JsonResponse({"status": "error", "message": "Invalid request method"}, status=405)
+
+    # ✅ 1) Detect content type (multipart vs json)
+    content_type = (request.content_type or "").lower()
 
     try:
-        data = json.loads(request.body)
+        if "multipart/form-data" in content_type:
+            # FormData path
+            to_email = (request.POST.get("email") or "").strip()
+            html_content = request.POST.get("html") or ""
+            subject = (request.POST.get("subject") or "Новое письмо | Eduverse").strip()
 
-        to_email = data.get("email")
-        html_content = data.get("html")
-        subject = data.get("subject", "Новое письмо | Eduverse")
+            # multiple attachments: <input name="attachments" multiple>
+            attachments = request.FILES.getlist("attachments")
 
-        if not to_email or not html_content:
-            return JsonResponse(
-                {"status": "error", "message": "Missing email or html"},
-                status=400
-            )
+        else:
+            # JSON path (backward compatible)
+            raw = request.body or b"{}"
+            data = json.loads(raw)
 
-        from_email = "support@eduverse.kz"
-        text_content = strip_tags(html_content)
+            to_email = (data.get("email") or "").strip()
+            html_content = data.get("html") or ""
+            subject = (data.get("subject") or "Новое письмо | Eduverse").strip()
 
-        email = EmailMultiAlternatives(
-            subject,
-            text_content,
-            from_email,
-            [to_email],
+            attachments = []  # no files in JSON
+    except Exception as e:
+        tb = traceback.format_exc()
+        print("PARSE ERROR:", repr(e))
+        print(tb)
+        return JsonResponse({"status": "error", "message": "Invalid payload", "detail": repr(e)}, status=400)
+
+    if not to_email or not html_content:
+        return JsonResponse({"status": "error", "message": "Missing email or html"}, status=400)
+
+    from_email = getattr(settings, "DEFAULT_FROM_EMAIL", None) or getattr(settings, "EMAIL_HOST_USER", None)
+    if not from_email:
+        return JsonResponse(
+            {"status": "error", "message": "Email settings not configured (DEFAULT_FROM_EMAIL/EMAIL_HOST_USER missing)"},
+            status=500,
         )
 
-        email.attach_alternative(html_content, "text/html")
-        email.send()
+    text_content = strip_tags(html_content)
 
-        return JsonResponse({
-            "status": "sent",
-            "message": "Email sent successfully"
-        })
+    try:
+        msg = EmailMultiAlternatives(
+            subject=subject,
+            body=text_content,
+            from_email=from_email,
+            to=[to_email],
+            reply_to=["support@eduverse.kz"],
+        )
+        msg.attach_alternative(html_content, "text/html")
 
-    except json.JSONDecodeError:
+        # ✅ 2) Attach files (multiple)
+        total_bytes = 0
+        for f in attachments:
+            # Optional: limit size per file (example 10MB)
+            if f.size > 10 * 1024 * 1024:
+                return JsonResponse(
+                    {"status": "error", "message": f"File too large: {f.name}"},
+                    status=400,
+                )
+
+            total_bytes += f.size
+            msg.attach(
+                f.name,
+                f.read(),
+                getattr(f, "content_type", None) or "application/octet-stream",
+            )
+
+        # Optional: total limit (example 20MB)
+        if total_bytes > 20 * 1024 * 1024:
+            return JsonResponse(
+                {"status": "error", "message": "Total attachments size too large"},
+                status=400,
+            )
+
+        sent_count = msg.send(fail_silently=False)
+        print("EMAIL SENT, count =", sent_count)
+
         return JsonResponse(
-            {"status": "error", "message": "Invalid JSON"},
-            status=400
+            {"status": "sent", "sent_count": sent_count, "attachments": len(attachments)},
+            status=200,
         )
 
     except Exception as e:
+        tb = traceback.format_exc()
+        print("EMAIL SEND ERROR:", repr(e))
+        print(tb)
         return JsonResponse(
-            {"status": "error", "message": str(e)},
-            status=500
+            {"status": "error", "message": "Email send failed", "detail": repr(e)},
+            status=500,
         )
-
 
 def send_text_single(phone, wa_text, idInstance, apiTokenInstance):
     url = f"https://7103.api.greenapi.com/waInstance{idInstance}/sendMessage/{apiTokenInstance}"
@@ -500,10 +547,14 @@ def add_clients(request):
         return JsonResponse({"ok": False, "error": "No product selected in session"}, status=400)
 
     product = get_object_or_404(Product, id=product_id)
-    
-    data = json.loads(request.body.decode("utf-8") or "{}")
+
+    try:
+        data = json.loads((request.body or b"{}").decode("utf-8"))
+    except json.JSONDecodeError:
+        return JsonResponse({"ok": False, "error": "Invalid JSON body"}, status=400)
+
     competition_id = data.get("competition")
-    student_ids = (data.get("students") or "")
+    student_ids = data.get("students") or []
 
     if not competition_id:
         return JsonResponse({"ok": False, "error": "competition_id is required"}, status=400)
@@ -511,26 +562,17 @@ def add_clients(request):
     if not isinstance(student_ids, list):
         return JsonResponse({"ok": False, "error": "students must be a list"}, status=400)
 
-    resp = get_results(request, competition_id)   
-    results = json.loads(resp.content.decode("utf-8")) 
+    resp = get_results(request, competition_id)
+    results = json.loads(resp.content.decode("utf-8") or "[]")
 
-    # ✅ build fast maps with consistent string keys
-    results_by_id = {
-        str(r.get("participantId")): r
-        for r in results
-    }
+    results_by_id = {str(r.get("participantId")): r for r in results}
 
-    resp = get_registrants(request, competition_id)   
-    registrants = json.loads(resp.content.decode("utf-8")) 
+    resp = get_registrants(request, competition_id)
+    registrants = json.loads(resp.content.decode("utf-8") or "[]")
 
-    registrants_by_id = {
-        str(r.get("participantId")): r
-        for r in registrants
-    }
+    registrants_by_id = {str(r.get("participantId")): r for r in registrants}
 
-    created_deals = 0
-    created_clients = 0
-    skipped = 0
+    created_deals = created_clients = skipped = 0
 
     with transaction.atomic():
         for participant_id in student_ids:
@@ -539,42 +581,45 @@ def add_clients(request):
             result_card = results_by_id.get(participant_id)
             registrant_card = registrants_by_id.get(participant_id)
 
-            if not registrant_card:
+            if not registrant_card or not result_card:
                 skipped += 1
                 continue
 
-            formated_result = f"{result_card['product']} - {result_card['quiz']} - {result_card['points']}/{result_card['maxPoints']} - {result_card['award']}\n"
+            formatted_result = (
+                f"{result_card.get('product','')} - {result_card.get('quiz','')} - "
+                f"{result_card.get('points','')}/{result_card.get('maxPoints','')} - "
+                f"{result_card.get('award','')}\n"
+            )
+
+            raw_phone = registrant_card.get('contact') or ""
+            formatted_phone = normalize_kz_phone(raw_phone)
 
             client = Client.objects.filter(participant_id=participant_id).first()
-
-            if client:
-                client.results += formated_result
-                client.save(update_fields=["results"])
-                client_created = False
-            else:
+            if not client:
                 client = Client.objects.create(
                     participant_id=participant_id,
-                    first_name=registrant_card['name'],
-                    last_name=registrant_card['surname'],
-                    email=registrant_card['email'],
-                    phone=(registrant_card.get('contact') or ""),
-                    results=formated_result,
-                    grade=registrant_card['grade'],
-                    school=(result_card.get('contact') or ""),
-                    countryId=registrant_card['countryId'],
+                    user_id=registrant_card.get('userId'),
+                    first_name=registrant_card.get('name', ''),
+                    last_name=registrant_card.get('surname', ''),
+                    email=registrant_card.get('email', ''),
+                    phone=formatted_phone,
+                    grade=registrant_card.get('grade', ''),
+                    school=registrant_card.get('school', ''),
+                    countryId=registrant_card.get('countryId'),
                 )
-                client_created = True
-
-            if client_created:
                 created_clients += 1
+            elif registrant_card.get('userId') is not None and (client.user_id is None or client.user_id != registrant_card.get('userId')):
+                client.user_id = registrant_card.get('userId')
+                client.save(update_fields=['user_id'])
 
-            _, deal_created = Deal.objects.get_or_create(
-                product=product,
-                client=client,
-            )
-            if deal_created:
+            deal = Deal.objects.filter(product=product, client=client).first()
+            if deal:
+                deal.result = ((deal.result or "").rstrip() + "\n" + formatted_result)
+                deal.save(update_fields=["result"])
+            else:
+                Deal.objects.create(product=product, client=client, result=formatted_result)
                 created_deals += 1
-                
+
     return JsonResponse({
         "ok": True,
         "product_id": product_id,
@@ -604,7 +649,6 @@ def client_card(request, client_id):
             client.phone = request.POST.get("phone", "")
             client.grade = request.POST.get("grade") or 0
             client.school = request.POST.get("school", "")
-            client.results = request.POST.get("results", "")
             client.note = request.POST.get("note") or None
 
             client.save()
@@ -624,6 +668,9 @@ def client_card(request, client_id):
 
         status = deal.status
         clientDict["status"] = status
+
+        result = deal.result
+        clientDict["result"] = result        
 
         clientJson = json.dumps(clientDict, default=str)  # Using default=str for unsupported type, like None
         

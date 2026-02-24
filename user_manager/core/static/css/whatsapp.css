@@ -180,8 +180,9 @@ textarea:focus {
 }
 
 .file-upload .button {
-    width: 100%;
-    justify-content: flex-start;
+    width: auto;
+    justify-content: center;
+    padding: 0.5rem 1.25rem;
 }
 
 .schedule-container {

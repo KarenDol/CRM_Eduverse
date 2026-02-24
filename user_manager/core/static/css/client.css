@@ -184,6 +184,11 @@ button:hover{
     color: #333;
 }
 
+.results-list {
+  padding-left: 24px;
+  color: rgba(0, 0, 0, 0.6);
+}
+
 select {
     display: none;
 }
@@ -287,8 +292,16 @@ p.desc{
   opacity: 1;
 }
 
-
+#participantIdLink,
+#participantIdLink:visited {
+  color: #100629;      /* or black */
+  text-decoration: underline;
+}
+#participantIdLink:hover {
+  opacity: .8;
+}
 
 .lead { background: #fbbf24; }
+.think { background: #60a5fa; }
 .subscribed { background: #4ade80; }
 .rejected { background: #f87171; }

@@ -27,10 +27,13 @@
         </svg>
       </h2>
 
-      <p class="desc" id="participant_id"></p>
-
+      <div class="form-control">
+        <p><b>Participant ID: </b><a href="#" id="participantIdLink"></a></p>
+      </div>
+      
       <div class="status-bar">
         <span class="status-btn lead" data-status="Лид">Лид</span>
+        <span class="status-btn think" data-status="Дум">Думает</span>
         <span class="status-btn subscribed" data-status="Акт">Подтвердил</span>
         <span class="status-btn rejected" data-status="Арх">Отказ</span>
 
@@ -74,15 +77,17 @@
       </div>
 
       <div class="form-control">
-        <label for="results">Results</label>
-        <textarea id="results" name="results" rows="4" placeholder="Сюда можно сохранять результаты/JSON/текст"></textarea>
+        <label for="note">Note (необязательно)</label>
+        <textarea id="note" name="note" rows="3" placeholder="Заметки"></textarea>
         <i class="icon"></i>
       </div>
 
       <div class="form-control">
-        <label for="note">Note (необязательно)</label>
-        <textarea id="note" name="note" rows="3" placeholder="Заметки"></textarea>
-        <i class="icon"></i>
+        <label>Results</label>
+
+        <ul id="results-list" class="results-list">
+          <!-- JS will populate <li> here -->
+        </ul>
       </div>
 
       <div class="button-group" id="buttons_edit">
@@ -111,7 +116,6 @@
       client = null;
     }
   </script>
-
   <script src="{% static 'js/client.js' %}"></script>
   <script src="https://unpkg.com/imask"></script>
 </body>

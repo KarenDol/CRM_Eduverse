@@ -8,9 +8,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const editButton = document.getElementById("edit-numbers-button")
   const copyButton = document.getElementById("copy-numbers-button")
   const sendButton = document.getElementById("send-button")
+  const subjectInput = document.getElementById("email-subject")
+
+  const fileInput = document.getElementById("file-input")
+  const fileButton = document.getElementById("file-button")
+  const filesListEl = document.getElementById("files-list")
+  let attachments = []
 
   // email preview iframe
   const previewIframe = document.getElementById("email-preview")
+
+  renderAttachments()
 
   // State
   let emails = [] // [{ email, status }]
@@ -139,6 +147,62 @@ document.addEventListener("DOMContentLoaded", () => {
     // если хочешь обратно проверку "exists" — вставишь сюда цикл
   }
 
+  function renderAttachments() {
+    if (!filesListEl) return
+    filesListEl.innerHTML = ""
+
+    if (!attachments.length) {
+      filesListEl.innerHTML = `<div style="opacity:.7;">Файлы не выбраны</div>`
+      return
+    }
+
+    attachments.forEach((file, idx) => {
+      const row = document.createElement("div")
+      row.style.display = "flex"
+      row.style.justifyContent = "space-between"
+      row.style.alignItems = "center"
+      row.style.padding = "6px 8px"
+      row.style.border = "1px solid #ddd"
+      row.style.borderRadius = "6px"
+      row.style.marginBottom = "6px"
+
+      const left = document.createElement("div")
+      left.textContent = `${file.name} (${Math.round(file.size / 1024)} KB)`
+
+      const removeBtn = document.createElement("button")
+      removeBtn.type = "button"
+      removeBtn.className = "button outline"
+      removeBtn.textContent = "Удалить"
+      removeBtn.addEventListener("click", () => {
+        attachments.splice(idx, 1)
+        renderAttachments()
+      })
+
+      row.appendChild(left)
+      row.appendChild(removeBtn)
+      filesListEl.appendChild(row)
+    })
+  }
+
+  fileButton.addEventListener("click", () => fileInput.click())
+
+  fileInput.addEventListener("change", () => {
+    const picked = Array.from(fileInput.files || [])
+    if (!picked.length) return
+
+    // add, but avoid duplicates by name+size+lastModified
+    const existingKeys = new Set(attachments.map(f => `${f.name}-${f.size}-${f.lastModified}`))
+    for (const f of picked) {
+      const key = `${f.name}-${f.size}-${f.lastModified}`
+      if (!existingKeys.has(key)) attachments.push(f)
+    }
+
+    // reset input so selecting same file again triggers change
+    fileInput.value = ""
+
+    renderAttachments()
+  })
+
   function editEmails() {
     inputEl.value = emails.map(x => x.email).join(", ")
     inputHandler()
@@ -174,30 +238,39 @@ document.addEventListener("DOMContentLoaded", () => {
     sendButton.innerText = "Отправка..."
 
     for (let i = 0; i < emails.length; i++) {
-      // пропускаем невалидные
       if (emails[i].status === "invalid") continue
 
       emails[i].status = "sending"
       renderList()
 
       try {
+        const form = new FormData()
+        form.append("email", emails[i].email)
+        form.append("html", html)
+        
+        const subject = subjectInput?.value?.trim() || "Новое письмо | Eduverse"
+
+        form.append("email", emails[i].email)
+        form.append("html", html)
+        form.append("subject", subject)
+        // optional:
+        // form.append("subject", "Новая заявка | Eduverse")
+
+        // add all attachments
+        for (const f of attachments) {
+          form.append("attachments", f) // "attachments" is a multi field
+        }
+
         const res = await fetch("/email/send", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
             "X-CSRFToken": getCsrf(),
+            // DO NOT set Content-Type here. Browser sets boundary automatically.
           },
-          body: JSON.stringify({
-            email: emails[i].email,
-            html: html,
-            // subject можешь прокинуть сюда, если надо:
-            // subject: "Новая заявка | Eduverse"
-          }),
+          body: form,
         })
 
         const data = await res.json().catch(() => ({}))
-
-        // твой backend возвращает {status:"sent"} или {status:"error"}
         emails[i].status = data.status === "sent" ? "sent" : "error"
       } catch {
         emails[i].status = "error"

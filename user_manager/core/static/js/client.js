@@ -5,17 +5,16 @@ document.addEventListener('DOMContentLoaded', function () {
   const statusButtons = document.querySelectorAll(".status-btn");
   const statusBar = document.querySelector(".status-bar");
 
-  const participantId = document.getElementById('participant_id');
+  const participantIdLink = document.getElementById("participantIdLink");
   const lastname = document.getElementById('lastname');
   const firstname = document.getElementById('firstname');
   const email = document.getElementById('email');
   const phone = document.getElementById('phone');
   const phoneLabel = document.getElementById('phone-label');
-
   const grade = document.getElementById('grade');
   const school = document.getElementById('school');
+  const results_list = document.getElementById("results-list");
 
-  const results = document.getElementById('results');
   const note = document.getElementById('note');
 
   const h2 = document.querySelector('h2');
@@ -25,17 +24,40 @@ document.addEventListener('DOMContentLoaded', function () {
   const button_back = document.getElementById('button_back');
   const button_cancel = document.getElementById('button_cancel');
 
-  const statusMap = {
-    "Лид": "Лид",
-    "Акт": "Акт",
-    "Арх": "Арх",
-  };
-
-
-
   //Populate a client card on the load
   block_edit();
   existsWhatsapp();
+
+  participantIdLink.innerText = client.participant_id;
+
+  participantIdLink.addEventListener("click", async (e) => {
+    e.preventDefault();
+
+    const pid = String(client.participant_id ?? "").trim();
+    if (!pid) return;
+
+    // copy
+    try {
+      await navigator.clipboard.writeText(pid);
+    } catch (err) {}
+
+    alert(
+      "Открыта новая вкладка с поиском участника.\n" +
+      "ID скопирован в буфер обмена.\n\n" +
+      "Вставьте ID в поиск (Ctrl+V) и нажмите «Фильтр»."
+    );
+
+    // open new tab (background attempt)
+    const newTab = window.open(
+      "https://app.eduverse.kz/default/participant",
+      "_blank"
+    );
+
+    if (newTab) {
+      newTab.blur();
+      window.focus();
+    }
+  });
 
   function allow_edit() {
     lastname.disabled = false;
@@ -44,7 +66,6 @@ document.addEventListener('DOMContentLoaded', function () {
     phone.disabled = false;
     grade.disabled = false;
     school.disabled = false;
-    results.disabled = false;
     note.disabled = false;
 
     buttons_edit.style.display = 'flex';
@@ -66,15 +87,24 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function block_edit() {
     // Populate inputs with values
-    participantId.innerHTML = `<p><b>Participant ID:</b> ${client.participant_id}</p>`;
     lastname.value = client.last_name ?? '';
     firstname.value = client.first_name ?? '';
     email.value = client.email ?? '';
     phone.value = client.phone ?? '';
     grade.value = client.grade ?? '';
     school.value = client.school ?? '';
-    results.value = client.results ?? '';
     note.value = client.note ?? '';
+
+    results_list.innerHTML = "";
+
+    (client.result || "")
+    .split("\n")
+    .filter(Boolean)
+    .forEach(line => {
+      const li = document.createElement("li");
+      li.textContent = line;
+      results_list.appendChild(li);
+    });
 
     statusBar.classList.remove('choosable');
 
@@ -93,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function () {
     statusInput.value = current;
 
 
-
     // Disable all inputs
     lastname.disabled = true;
     firstname.disabled = true;
@@ -101,7 +130,6 @@ document.addEventListener('DOMContentLoaded', function () {
     phone.disabled = true;
     grade.disabled = true;
     school.disabled = true;
-    results.disabled = true;
     note.disabled = true;
     // Reset validations
     [
@@ -111,7 +139,6 @@ document.addEventListener('DOMContentLoaded', function () {
       phone,
       grade,
       school,
-      results,
       note,
     ].forEach(setDefault);
 
@@ -210,8 +237,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     validateField(grade, isPositiveInt(grade.value), 'Укажите класс числом');
     validateField(school, school.value.trim() !== '', 'Это поле не может быть пустым');
-
-    validateField(results, results.value.trim() !== '', 'Results не может быть пустым');
 
     // note optional
     validateField(note, true, '');

@@ -143,5 +143,5 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'support@eduverse.kz'
-EMAIL_HOST_PASSWORD = 'qdtpcxnwiblfsurz'
+EMAIL_HOST_PASSWORD = 'wiapiflevprmobaq'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER

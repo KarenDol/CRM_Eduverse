@@ -20,13 +20,14 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Dictionaries
     const status_dict = {
         'Лид': 'Лиды',
+        'Дум': 'Думает',
         'Акт': 'Подтвердили',
         'Арх': 'Отказали'
     }
 
     const competitions_dict = { 0: "Выберите competition" };
 
-    const competitions = await window.get_competitions();
+    const competitions = await getCompetitions();
 
     competitions.forEach(c => {
         competitions_dict[c.id] = c.title;
@@ -222,9 +223,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     function populateSelectMenu(dict) {
         optionsContainer.innerHTML = "";
 
-        Object.entries(dict).forEach(([id, title]) => {
-            addSelectMenuOption(id, title);
-        });
+        Object.entries(dict)
+            .sort((a, b) => String(a[1]).localeCompare(String(b[1]), "ru", { sensitivity: "base" }))
+            .forEach(([id, title]) => addSelectMenuOption(id, title));
     }
 
     function addSelectMenuOption(id, title) {
@@ -239,6 +240,19 @@ document.addEventListener('DOMContentLoaded', async function() {
 
         li.appendChild(span);
         optionsContainer.appendChild(li);
+    }
+
+    async function getCompetitions() {
+        const cached = localStorage.getItem("competitions");
+
+        if (cached) {
+            return JSON.parse(cached);
+        }
+
+        const competitions = await window.get_competitions();
+        localStorage.setItem("competitions", JSON.stringify(competitions));
+
+        return competitions;
     }
 
     selectBtn.addEventListener("click", () => {
@@ -291,7 +305,56 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     }
 
+    function buildAddLeadsMessage(data, checkedStudentsCount) {
+        const ok = Boolean(data?.ok);
 
+        const productId = data?.product_id ?? "—";
+        const createdClients = Number(data?.created_clients ?? 0);
+        const createdDeals = Number(data?.created_deals ?? 0);
+        const skipped = Number(data?.skipped ?? 0);
+
+        // сколько получилось “обработано” (по твоим полям это created+skipped, но обновление существующих сделок не считается отдельно)
+        const processed = createdDeals + skipped;
+
+        const lines = [];
+
+        if (ok) {
+            lines.push("✅ Новые лиды обработаны!");
+        } else {
+            lines.push("❌ Не удалось добавить лиды.");
+        }
+
+        lines.push("");
+        lines.push("📦 Детали операции:");
+        lines.push(`• Product ID (из сессии): ${productId}`);
+        lines.push(`• Competition ID (выбранный): ${state.selected ?? "—"}`);
+        lines.push(`• Выбрано учеников: ${checkedStudentsCount}`);
+
+        lines.push("");
+        lines.push("📊 Результат:");
+        lines.push(`• Создано клиентов (Client): ${createdClients}`);
+        lines.push(`• Создано сделок (Deal): ${createdDeals}`);
+        lines.push(`• Пропущено (skipped): ${skipped}`);
+
+        // маленькая подсказка что значит skipped
+        if (skipped > 0) {
+            lines.push("");
+            lines.push("ℹ️ Почему могло быть skipped:");
+            lines.push("• participantId нет в registrants или results по competition");
+            lines.push("• в ответах API отсутствуют карточки участника");
+        }
+
+        // sanity check / полезная инфа
+        lines.push("");
+        lines.push("🧮 Проверка:");
+        lines.push(`• Итог обработано (created_deals + skipped): ${processed}`);
+        lines.push(`• Ожидалось обработать (выбрано): ${checkedStudentsCount}`);
+        if (processed !== checkedStudentsCount) {
+            lines.push("⚠️ Внимание: числа не сходятся — возможно, были дубликаты participantId или бэкенд не считает обновления отдельно.");
+        }
+
+        return lines.join("\n");
+    }
 
     send.addEventListener('click', () => {
         // Get all checkboxes in the table
@@ -321,31 +384,44 @@ document.addEventListener('DOMContentLoaded', async function() {
                     return;
                 }
 
-                // Post saved students
-                fetch('/product/clients/add', {
-                    method: 'POST',
-                    headers: {
-                    'Content-Type': 'application/json',
-                    },
+                fetch("/product/clients/add", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        competition: state.selected,
-                        students: checkedStudents,
+                    competition: state.selected,
+                    students: checkedStudents,
                     }),
                 })
-                .then(async (res) => {
-                if (!res.ok) {
-                    const text = await res.text().catch(() => '');
-                    throw new Error(`HTTP ${res.status}. ${text}`);
-                }
-                return res.json().catch(() => ({}));
-                })
-                .then(() => {
-                    alert('Новые лиды добавлены!');
-                })
-                .catch((error) => {
-                    console.error('Error:', error);
-                    alert('Произошла ошибка!');
-                });
+                    .then(async (res) => {
+                    if (!res.ok) {
+                        const text = await res.text().catch(() => "");
+                        throw new Error(`HTTP ${res.status}. ${text}`);
+                    }
+                    return res.json().catch(() => ({}));
+                    })
+                    .then((data) => {
+                    const msg = buildAddLeadsMessage(data, checkedStudents.length);
+
+                    alert(msg);
+
+                    // 🔥 refresh AFTER success
+                    window.location.reload();
+                    })
+                    .catch((error) => {
+                    console.error("Error:", error);
+
+                    alert(
+                        [
+                        "❌ Произошла ошибка при добавлении лидов.",
+                        "",
+                        `Competition ID: ${state.selected ?? "—"}`,
+                        `Выбрано учеников: ${checkedStudents.length}`,
+                        "",
+                        `Ошибка: ${error.message}`,
+                        ].join("\n")
+                    );
+                    });
+
                 break;
             }
             case "WHATS_APP": {
@@ -394,7 +470,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     return res.json().catch(() => ({}));
                 })
                 .then(data => {
-                    window.location.href = "http://localhost:3000";
+                    window.location.href = "http://email.a1s.kz";
                 })
                 .catch(error => {
                     console.error('Error:', error);

@@ -4,6 +4,7 @@ import uuid
 
 client_status = [
     ('Лид', 'В работе'),
+    ('Дум', 'Думает'),
     ('Акт', 'Подтвердил'),
     ('Арх', 'Отказ'),
 ]
@@ -17,31 +18,36 @@ class CRM_User(models.Model):
     phone = models.CharField(max_length=20, null=True)
     email = models.CharField(max_length=100, null=True)
 
+
 class Product(models.Model):
     name = models.CharField(max_length=100)
 
+
 class Client(models.Model):
     participant_id = models.IntegerField()
+    user_id = models.IntegerField(null=True, blank=True)  # bestys userId for get/account/detail
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=100)
     email = models.CharField(max_length=100, null=True)
-    phone = models.CharField(max_length=20)
-    results = models.TextField()
+    phone = models.CharField(max_length=20, null=True)
     note = models.TextField(null=True)
     grade = models.IntegerField()
-    school = models.CharField(max_length=150)
+    school = models.CharField(max_length=150, null=True)
     countryId = models.IntegerField()
+    # results = models.TextField(null=True)
+
 
 class WhatsAppAccount(models.Model):
     phone = models.CharField(max_length=20)
     idInstance = models.CharField(max_length=10)
     apiTokenInstance = models.CharField(max_length=50)
 
+
 class Deal(models.Model):
     product = models.ForeignKey(
-        "Product",
-        on_delete=models.PROTECT,
-        related_name="deals",
+        Product, 
+        on_delete=models.CASCADE, 
+        related_name="deals"
     )
     client = models.ForeignKey(
         "Client",
@@ -49,6 +55,7 @@ class Deal(models.Model):
         related_name="deals",
     )
     status = models.CharField(max_length=30, choices=client_status, default='Лид')
+    result = models.TextField(null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
 
