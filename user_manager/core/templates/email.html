@@ -2,26 +2,58 @@
 {% extends 'index.html' %}
 {% block content %}
 {% load static %}
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Email Рассылка</title>
   <link rel="stylesheet" href="{% static 'css/whatsapp.css' %}">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <style>
+    .email-page-layout { display: flex; flex-direction: column; gap: 1.5rem; }
+    .templates-section { background: white; border-radius: var(--border-radius, 6px); box-shadow: var(--shadow, 0 1px 3px rgba(0,0,0,.1)); padding: 1rem 1.25rem; }
+    .templates-section h2 { margin-bottom: 0.75rem; font-size: 1rem; }
+    .templates-list { display: flex; flex-wrap: nowrap; gap: 1rem; align-items: stretch; overflow-x: auto; overflow-y: hidden; padding-bottom: 0.5rem; }
+    .templates-list::-webkit-scrollbar { height: 8px; }
+    .templates-list::-webkit-scrollbar-track { background: var(--gray-100, #f3f4f6); border-radius: 4px; }
+    .templates-list::-webkit-scrollbar-thumb { background: var(--gray-400, #9ca3af); border-radius: 4px; }
+    .template-card { width: 200px; flex-shrink: 0; border: 1px solid var(--gray-200, #e5e7eb); border-radius: 8px; overflow: hidden; background: var(--gray-100, #f3f4f6); }
+    .template-card-preview { height: 140px; background: #fff; border-bottom: 1px solid var(--gray-200); overflow: hidden; }
+    .template-card-preview iframe { width: 100%; height: 100%; border: 0; transform-origin: 0 0; pointer-events: none; }
+    .template-card-body { padding: 0.5rem 0.75rem; }
+    .template-card-name { font-weight: 600; font-size: 0.875rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .template-card-body { cursor: context-menu; }
+    .btn-build-new { margin-bottom: 0.75rem; }
+    .template-context-menu { display: none; position: fixed; z-index: 10000; min-width: 180px; background: white; border: 1px solid var(--gray-200, #e5e7eb); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,.15); padding: 4px 0; }
+    .template-context-menu.open { display: block; }
+    .template-context-menu button { display: block; width: 100%; padding: 0.5rem 0.75rem; text-align: left; font-size: 0.875rem; border: none; background: none; cursor: pointer; color: var(--gray-800, #1f2937); }
+    .template-context-menu button:hover { background: var(--gray-100, #f3f4f6); }
+    .template-context-menu button.context-menu-delete { color: var(--red, #ef4444); }
+  </style>
 </head>
 <body>
   <div class="container">
     <h1>Email Рассылка</h1>
 
-    <form id="send-form">
+    <form id="send-form" class="email-page-layout">
       {% csrf_token %}
+
+      <!-- Templates section with previews -->
+      <div class="templates-section card">
+        <div class="card-content">
+          <h2>Шаблоны писем</h2>
+          <button type="button" id="build-new-btn" class="button primary btn-build-new">
+            Создать новый в конструкторе
+          </button>
+          <div id="templates-list" class="templates-list"></div>
+        </div>
+      </div>
+
       <div class="grid">
-        <!-- Left side - Phone numbers -->
+        <!-- Left - Recipients -->
         <div class="card">
           <div class="card-content">
             <h2>Emails</h2>
-
             <div id="phone-input-section" class="space-y">
               <div>
                 <label for="phone-numbers">Введите email адреса (разделенные запятой и пробелом)</label>
@@ -29,7 +61,6 @@
               </div>
               <button type="button" id="parse-button" class="button primary" disabled>Извлечь Emails</button>
             </div>
-
             <div id="phone-list-section" class="space-y hidden">
               <div id="phone-list" class="phone-list"></div>
               <div class="button-group">
@@ -40,45 +71,30 @@
           </div>
         </div>
 
-        <!-- Right side - Message composition -->
+        <!-- Right - Compose -->
         <div class="card">
           <div class="card-content">
-            <h2>E-mail</h2>
-
+            <h2>Письмо</h2>
             <div>
               <label for="email-subject">Тема письма</label>
-              <input 
-                type="text" 
-                id="email-subject" 
-                placeholder="Например: Новая заявка | Eduverse"
-                class="editor"
-              >
+              <input type="text" id="email-subject" placeholder="Например: Новая заявка | Eduverse" class="editor">
             </div>
-
             <div class="space-y">
               <div>
-                <label for="message">Текст письма</label>
-                <iframe 
-                    id="email-preview" 
-                    style="width: 100%; height: 500px; border: 1px solid #ddd; border-radius: 6px;">
-                </iframe>
+                <label>Превью письма</label>
+                <iframe id="email-preview" style="width: 100%; height: 500px; border: 1px solid #ddd; border-radius: 6px;"></iframe>
               </div>
-
               <div>
                 <label>Вложения</label>
-
                 <div class="file-upload">
                   <button type="button" id="file-button" class="button outline">
                     <span id="file-name">Добавить файлы</span>
                   </button>
-
                   <input type="file" id="file-input" class="hidden" multiple>
                 </div>
-
                 <div id="files-list" style="margin-top:10px;"></div>
               </div>
-
-              <button type="submit" id="send-button" class="button primary" disabled>
+              <button type="button" id="send-button" class="button primary" disabled>
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
                   <line x1="22" y1="2" x2="11" y2="13"></line>
                   <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
@@ -92,20 +108,21 @@
     </form>
   </div>
   <script>
-        function updatePreview(html) {
-            const iframe = document.getElementById("email-preview")
-            const doc = iframe.contentDocument || iframe.contentWindow.document
-            doc.open()
-            doc.write(html)
-            doc.close()
-        }
-
-        // Получаем HTML из Django
-        const emailHtml = {{ email_html|safe }};
-        updatePreview(emailHtml);
+    function updatePreview(html) {
+      const iframe = document.getElementById("email-preview");
+      if (!iframe) return;
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.open();
+      doc.write(html || "<p style='padding:1rem;color:#666;'>Пусто. Выберите шаблон или создайте письмо в конструкторе.</p>");
+      doc.close();
+    }
+    const emailHtml = {{ email_html|safe }};
+    updatePreview(emailHtml);
   </script>
   <script>
-    var emails_from_server = {{ list_of_emails|safe }};
+    window.emails_from_server = {{ list_of_emails|safe }};
+    window.email_templates = {{ templates_json|safe }};
+    window.EMAIL_BUILDER_URL = "{{ email_builder_url|escapejs }}";
   </script>
   <script src="{% static 'js/email.js' %}"></script>
 </body>

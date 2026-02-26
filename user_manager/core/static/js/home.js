@@ -470,7 +470,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                     return res.json().catch(() => ({}));
                 })
                 .then(data => {
-                    window.location.href = "http://email.a1s.kz";
+                    window.location.href = "/email/";
                 })
                 .catch(error => {
                     console.error('Error:', error);

@@ -695,14 +695,106 @@ def saveHTML(request):
     return JsonResponse({"uuid": str(obj.uuid)})
 
 
+def email_compose(request):
+    """Email sending page with template list and preview. No template pre-selected."""
+    if not request.user.is_authenticated:
+        return redirect("login_user")
+    list_of_emails = request.session.get("emails") or []
+    templates = list(
+        EmailTemplate.objects.order_by("-updated_at").values("uuid", "title", "html")
+    )
+    for t in templates:
+        t["uuid"] = str(t["uuid"])
+        t["name"] = (t.get("title") or "").strip() or "Без названия"
+    context = {
+        "email_html": json.dumps(""),
+        "list_of_emails": json.dumps(list_of_emails),
+        "templates_json": json.dumps(templates),
+        "email_builder_url": getattr(settings, "EMAIL_BUILDER_URL", "https://email.a1s.kz"),
+    }
+    return render(request, "email.html", context)
+
+
 def email_open(request, email_id):
-    email = EmailTemplate.objects.get(uuid=email_id)
-    list_of_emails = request.session.get('emails') or []
-    print('LIST OF EMAILS')
-    print(list_of_emails)
+    """Email sending page with a specific template pre-loaded."""
+    if not request.user.is_authenticated:
+        return redirect("login_user")
+    email = get_object_or_404(EmailTemplate, uuid=email_id)
+    list_of_emails = request.session.get("emails") or []
+    templates = list(
+        EmailTemplate.objects.order_by("-updated_at").values("uuid", "title", "html")
+    )
+    for t in templates:
+        t["uuid"] = str(t["uuid"])
+        t["name"] = (t.get("title") or "").strip() or "Без названия"
     context = {
         "email_html": json.dumps(email.html),
         "list_of_emails": json.dumps(list_of_emails),
+        "templates_json": json.dumps(templates),
+        "email_builder_url": getattr(settings, "EMAIL_BUILDER_URL", "https://email.a1s.kz"),
     }
-
     return render(request, "email.html", context)
+
+
+@require_GET
+def list_templates(request):
+    """API: list all email templates (id, name, html for preview)."""
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    templates = list(
+        EmailTemplate.objects.order_by("-updated_at").values("uuid", "title", "html")
+    )
+    out = []
+    for t in templates:
+        out.append({
+            "id": str(t["uuid"]),
+            "name": (t.get("title") or "").strip() or "Без названия",
+            "html": t["html"],
+        })
+    return JsonResponse(out, safe=False)
+
+
+@require_GET
+def get_template(request, template_id):
+    """API: get one template by uuid (for builder to load). Read-only; UUID is unguessable."""
+    t = get_object_or_404(EmailTemplate, uuid=template_id)
+    return JsonResponse({
+        "id": str(t.uuid),
+        "name": (t.title or "").strip() or "Без названия",
+        "html": t.html,
+    })
+
+
+@csrf_exempt
+def update_template(request, template_id):
+    """API: update template html and optional title (from builder)."""
+    if request.method not in ("POST", "PUT"):
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    t = get_object_or_404(EmailTemplate, uuid=template_id)
+    try:
+        data = json.loads(request.body.decode("utf-8") or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+    html = data.get("html")
+    if isinstance(html, str):
+        t.html = html
+    title = data.get("title")
+    if isinstance(title, str):
+        t.title = title.strip()
+    t.save()
+    return JsonResponse({"uuid": str(t.uuid)})
+
+
+@csrf_exempt
+def delete_template(request, template_id):
+    """API: delete a template. Requires auth."""
+    if request.method != "DELETE":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "Unauthorized"}, status=401)
+    t = get_object_or_404(EmailTemplate, uuid=template_id)
+    deleted_id = str(t.uuid)
+    t.delete()
+    return JsonResponse({"ok": True, "deleted_id": deleted_id})

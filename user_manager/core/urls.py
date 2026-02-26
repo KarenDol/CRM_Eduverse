@@ -26,8 +26,13 @@ urlpatterns = [
     path("whatsapp/", views.whatsapp, name="whatsapp"),
     path("whatsapp/send_one/", views.send_one_whatsapp, name="send_one_whatsapp"),
 
-    #Email,
+    # Email
+    path("email/", views.email_compose, name="email_compose"),
     path("email/open/<email_id>", views.email_open, name="email_open"),
+    path("email/templates/", views.list_templates, name="list_templates"),
+    path("email/templates/<uuid:template_id>/", views.get_template, name="get_template"),
+    path("email/templates/<uuid:template_id>/update/", views.update_template, name="update_template"),
+    path("email/templates/<uuid:template_id>/delete/", views.delete_template, name="delete_template"),
     path("email/saveHTML", views.saveHTML, name="saveHTML"),
     path("email/send", views.send_email, name="send_email"),
 

@@ -57,8 +57,8 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    # later add your real frontend domain(s):
-    # "https://app.yoursite.com",
+    "https://email.a1s.kz",
+    "http://email.a1s.kz",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -145,3 +145,6 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'support@eduverse.kz'
 EMAIL_HOST_PASSWORD = 'wiapiflevprmobaq'
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
+# URL of the email-builder app (for "Build new" / "Edit in builder" links)
+EMAIL_BUILDER_URL = "https://email.a1s.kz"

@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // DOM Elements (оставляем твои id, чтобы не менять HTML)
-  const inputEl = document.getElementById("phone-numbers") // emails textarea
+  const inputEl = document.getElementById("phone-numbers")
   const parseButton = document.getElementById("parse-button")
   const inputSection = document.getElementById("phone-input-section")
   const listSection = document.getElementById("phone-list-section")
@@ -9,14 +8,142 @@ document.addEventListener("DOMContentLoaded", () => {
   const copyButton = document.getElementById("copy-numbers-button")
   const sendButton = document.getElementById("send-button")
   const subjectInput = document.getElementById("email-subject")
-
   const fileInput = document.getElementById("file-input")
   const fileButton = document.getElementById("file-button")
   const filesListEl = document.getElementById("files-list")
+  const previewIframe = document.getElementById("email-preview")
+  const templatesListEl = document.getElementById("templates-list")
+  const buildNewBtn = document.getElementById("build-new-btn")
+
   let attachments = []
 
-  // email preview iframe
-  const previewIframe = document.getElementById("email-preview")
+  const builderUrl = (typeof window.EMAIL_BUILDER_URL !== "undefined" && window.EMAIL_BUILDER_URL) ? window.EMAIL_BUILDER_URL : "https://email.a1s.kz"
+
+  function updateMainPreview(html) {
+    if (typeof window.updatePreview === "function") {
+      window.updatePreview(html)
+    } else if (previewIframe) {
+      const doc = previewIframe.contentDocument || previewIframe.contentWindow.document
+      doc.open()
+      doc.write(html || "<p style='padding:1rem;color:#666;'>Пусто.</p>")
+      doc.close()
+    }
+  }
+
+  async function loadTemplates() {
+    try {
+      const res = await fetch("/email/templates/", { headers: { "Accept": "application/json" } })
+      if (res.ok) {
+        const data = await res.json()
+        return Array.isArray(data) ? data : []
+      }
+    } catch (e) { console.warn("Failed to fetch templates", e) }
+    return Array.isArray(window.email_templates) ? window.email_templates : []
+  }
+
+  function renderTemplatePreview(iframe, html) {
+    if (!iframe || !html) return
+    try {
+      const doc = iframe.contentDocument || iframe.contentWindow.document
+      doc.open()
+      doc.write(html)
+      doc.close()
+      const scale = 200 / 600
+      iframe.style.width = "600px"
+      iframe.style.height = "420px"
+      iframe.style.transform = `scale(${scale})`
+      iframe.style.transformOrigin = "0 0"
+    } catch (e) { /* ignore */ }
+  }
+
+  let contextMenuTemplate = null
+  const contextMenu = document.createElement("div")
+  contextMenu.className = "template-context-menu"
+  contextMenu.id = "template-context-menu"
+  const menuActions = [
+    { key: "use", label: "Использовать", fn: (t) => { updateMainPreview(t.html) } },
+    { key: "edit", label: "В конструкторе", fn: (t) => { window.open(builderUrl + "?templateId=" + encodeURIComponent(t.id), "_blank") } },
+    { key: "rename", label: "Переименовать", fn: async (t) => {
+      const name = prompt("Название шаблона:", t.name)
+      if (name === null) return
+      try {
+        const res = await fetch("/email/templates/" + encodeURIComponent(t.id) + "/update/", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", "X-CSRFToken": getCsrf() },
+          body: JSON.stringify({ title: (name || "").trim() }),
+        })
+        if (!res.ok) throw new Error(await res.text())
+        loadTemplates().then(renderTemplatesList)
+      } catch (e) {
+        alert("Ошибка: " + (e.message || String(e)))
+      }
+    }},
+    { key: "delete", label: "Удалить", deleteStyle: true, fn: (t) => {
+      if (!confirm('Удалить шаблон «' + t.name + '»?')) return
+      fetch("/email/templates/" + encodeURIComponent(t.id) + "/delete/", {
+        method: "DELETE",
+        headers: { "X-CSRFToken": getCsrf() },
+      })
+        .then((res) => { if (!res.ok) throw new Error(res.statusText); return res.json() })
+        .then(() => loadTemplates().then(renderTemplatesList))
+        .catch((err) => alert("Ошибка удаления: " + (err.message || String(err))))
+    }},
+  ]
+  menuActions.forEach((a) => {
+    const btn = document.createElement("button")
+    btn.type = "button"
+    btn.textContent = a.label
+    if (a.deleteStyle) btn.classList.add("context-menu-delete")
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation()
+      contextMenu.classList.remove("open")
+      if (contextMenuTemplate) a.fn(contextMenuTemplate)
+      contextMenuTemplate = null
+    })
+    contextMenu.appendChild(btn)
+  })
+  document.body.appendChild(contextMenu)
+  document.addEventListener("click", () => {
+    contextMenu.classList.remove("open")
+    contextMenuTemplate = null
+  })
+
+  function renderTemplatesList(templates) {
+    if (!templatesListEl) return
+    templatesListEl.innerHTML = ""
+    templates.forEach((t) => {
+      const card = document.createElement("div")
+      card.className = "template-card"
+      const previewDiv = document.createElement("div")
+      previewDiv.className = "template-card-preview"
+      const miniIframe = document.createElement("iframe")
+      miniIframe.title = t.name
+      previewDiv.appendChild(miniIframe)
+      const body = document.createElement("div")
+      body.className = "template-card-body"
+      const nameEl = document.createElement("div")
+      nameEl.className = "template-card-name"
+      nameEl.textContent = t.name
+      body.appendChild(nameEl)
+      card.appendChild(previewDiv)
+      card.appendChild(body)
+      card.addEventListener("contextmenu", (e) => {
+        e.preventDefault()
+        contextMenuTemplate = t
+        contextMenu.style.left = e.clientX + "px"
+        contextMenu.style.top = e.clientY + "px"
+        contextMenu.classList.add("open")
+      })
+      templatesListEl.appendChild(card)
+      renderTemplatePreview(miniIframe, t.html)
+    })
+  }
+
+  loadTemplates().then(renderTemplatesList)
+
+  buildNewBtn?.addEventListener("click", () => {
+    window.open(builderUrl, "_blank")
+  })
 
   renderAttachments()
 
@@ -43,7 +170,6 @@ document.addEventListener("DOMContentLoaded", () => {
   editButton.addEventListener("click", editEmails)
   copyButton.addEventListener("click", copyEmails)
 
-  // IMPORTANT: send button click should not submit form / reload page
   sendButton.addEventListener("click", (e) => {
     e.preventDefault()
     sendEmails()
@@ -229,7 +355,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const html = getEmailHtmlFromIframe()
 
     if (!html || !html.trim()) {
-      alert("Пустой HTML письма (iframe).")
+      alert("Пустой HTML письма. Выберите шаблон или создайте письмо в конструкторе.")
       return
     }
 
