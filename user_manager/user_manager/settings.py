@@ -41,6 +41,7 @@ INSTALLED_APPS = [
 
     #My apps
     'core',
+    'wa_inbox',
 ]
 
 MIDDLEWARE = [
@@ -148,3 +149,15 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # URL of the email-builder app (for "Build new" / "Edit in builder" links)
 EMAIL_BUILDER_URL = "https://email.a1s.kz"
+
+# WhatsApp Team Inbox (WhatsAppFront) – URL of the Next.js frontend.
+# Use for one WhatsApp shared across departments. Dev: http://localhost:3000
+WA_INBOX_FRONTEND_URL = "http://localhost:3000"
+
+# Green API for wa_inbox poller (management command wa_inbox_poll_green).
+# Use same instance/token as the bot so messages are stored in CRM Contact + Message.
+GREEN_API_INSTANCE = "waInstance7103163711"
+GREEN_API_TOKEN = "677efe89a87e474f93b6ca379ea32a364bf6be6020414505bd"
+
+# Optional: require this header on POST /wa-inbox/api/record-message/ (bot pushing to CRM).
+# WA_INBOX_API_KEY = "your-secret-key"

@@ -1,0 +1,8 @@
+{% extends 'index.html' %}
+{% block content %}
+<div class="container" style="padding: 2rem;">
+  <h1>WhatsApp Team Inbox</h1>
+  <p>Configure <code>WA_INBOX_FRONTEND_URL</code> in Django settings to launch the WhatsAppFront app (e.g. <code>http://localhost:3000</code> for dev).</p>
+  <p><a href="{% url 'wa_inbox:inbox_embed' %}">Open in embed</a> to load the frontend inside the CRM.</p>
+</div>
+{% endblock %}
