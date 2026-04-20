@@ -18,8 +18,8 @@ def normalize_phone(chat_id: str) -> str:
     return re.sub(r"\D", "", chat_id.split("@")[0])
 
 
-def get_or_create_contact(phone: str, name: str = None) -> Contact:
-    """Get or create a Contact by phone. Optionally set name if provided and contact is new."""
+def get_or_create_contact(phone: str, name: str = None):
+    """Get or create a Contact by phone. Returns (contact, created). Optionally set name if provided and contact is new."""
     phone = normalize_phone(phone)
     if not phone:
         raise ValueError("Invalid chat_id or phone")
@@ -35,7 +35,7 @@ def get_or_create_contact(phone: str, name: str = None) -> Contact:
     if created and name and (name or "").strip():
         contact.name = (name or "").strip()
         contact.save(update_fields=["name"])
-    return contact
+    return contact, created
 
 
 def record_message(

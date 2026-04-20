@@ -11,7 +11,7 @@ from django.shortcuts import redirect, render
 from .models import Client
 
 
-BASE_URL = "https://api.bestys.co/api"
+BASE_URL = "https://back.bestys.co/api"
 BACK_BASE_URL = "https://back.bestys.co/api"
 
 # ---------------------------------------------------------------------
@@ -33,6 +33,7 @@ BASE_HEADERS: Dict[str, str] = {
     "Sec-Fetch-Site": "cross-site",
     "Sec-Fetch-Mode": "cors",
     "Sec-Fetch-Dest": "empty",
+    "Access-Control-Allow-Origin": "https://stemco.tech",
 }
 
 # ---------------------------------------------------------------------
@@ -303,10 +304,9 @@ def open_eduverse_participant(request, participant_id: int):
     1. GETs /eduverse/participant-token/{user_id}/ (server does back.bestys login
        + get/account/detail, returns participant token),
     2. Redirects to app.eduverse.kz with that token in the hash.
-    Uses Client.user_id for userId when set; else falls back to participant_id.
+    Uses participant_id as userId (Client.user_id was removed in migration 0013).
     """
-    client = Client.objects.filter(participant_id=participant_id).first()
-    user_id = client.user_id if (client and client.user_id is not None) else participant_id
+    user_id = participant_id
     return render(
         request,
         "eduverse_redirect.html",

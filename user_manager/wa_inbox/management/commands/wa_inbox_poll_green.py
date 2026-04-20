@@ -91,7 +91,7 @@ class Command(BaseCommand):
                 content = (msg_data.get("extendedTextMessageData") or {}).get("textMessage", "")
 
             direction = "INBOUND" if type_webhook == "incomingMessageReceived" else "OUTBOUND"
-            contact = get_or_create_contact(chat_id, name=sender_name)
+            contact, _ = get_or_create_contact(chat_id, name=sender_name)
             record_message(contact, direction, content)
             self.stdout.write(f"Recorded {direction} for {contact.phone}: {content[:50]}...")
         except Exception as e:

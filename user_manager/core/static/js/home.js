@@ -27,11 +27,15 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     const competitions_dict = { 0: "Выберите competition" };
 
-    const competitions = await getCompetitions();
-
-    competitions.forEach(c => {
-        competitions_dict[c.id] = c.title;
-    });
+    let competitions = [];
+    try {
+        competitions = await getCompetitions();
+        competitions.forEach(c => {
+            competitions_dict[c.id] = c.title;
+        });
+    } catch (err) {
+        console.warn("Competitions load failed, table will still work:", err);
+    }
 
     const MODES = {
         DEFAULT: {

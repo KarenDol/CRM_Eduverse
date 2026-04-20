@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-*#0udd5612&!@)p)()t7y8$-+-$(o#t^qnz56+s6#pp$5ia3*2
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['wa.a1s.kz']
 
 
 # Application definition
@@ -60,9 +60,31 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
     "https://email.a1s.kz",
     "http://email.a1s.kz",
+    "https://wa.a1s.kz",
+    "http://wa.a1s.kz",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# Allow custom auth headers so frontend can send X-WA-Inbox-Token (and API key) without CORS blocking.
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-language",
+    "content-language",
+    "content-type",
+    "authorization",
+    "x-wa-inbox-token",
+    "x-wa-inbox-api-key",
+]
+
+# Required in Django 4+ when frontend (e.g. localhost:3000) POSTs to this backend.
+# Otherwise: "Origin checking failed - http://localhost:3000 does not match any trusted origins."
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://wa.a1s.kz",
+    "http://wa.a1s.kz",
+]
 
 ROOT_URLCONF = 'user_manager.urls'
 
@@ -115,6 +137,9 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# Auth: where to send users when login_required redirects (e.g. /wa-inbox/ -> /login/?next=/wa-inbox/)
+LOGIN_URL = "/login/"
+
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
 
@@ -131,7 +156,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = 'static/'
-STATIC_ROOT = '/Users/karen/Desktop/Developer/CRM/staticfiles'
+# STATIC_ROOT = '/Users/karen/Desktop/Developer/CRM/staticfiles'
+STATIC_ROOT = '/home/ubuntu/CRM_Eduverse/staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -151,13 +177,16 @@ DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 EMAIL_BUILDER_URL = "https://email.a1s.kz"
 
 # WhatsApp Team Inbox (WhatsAppFront) – URL of the Next.js frontend.
-# Use for one WhatsApp shared across departments. Dev: http://localhost:3000
+# Use for one WhatsApp shared across departments.
+# For session login to work (no 401), frontend must be on the SAME domain as the CRM
+# (e.g. both https://wa.a1s.kz). Dev with different origins (e.g. frontend :3000, CRM :8000)
+# will get 401 until deployed same-origin. Production: set to e.g. "https://wa.a1s.kz"
 WA_INBOX_FRONTEND_URL = "http://localhost:3000"
 
 # Green API for wa_inbox poller (management command wa_inbox_poll_green).
 # Use same instance/token as the bot so messages are stored in CRM Contact + Message.
-GREEN_API_INSTANCE = "waInstance7103163711"
-GREEN_API_TOKEN = "677efe89a87e474f93b6ca379ea32a364bf6be6020414505bd"
+GREEN_API_INSTANCE = "waInstance7103440972"
+GREEN_API_TOKEN = "7833fac0e9ec4bf3b114d58c87411cec62e741f5c31c452885"
 
 # Optional: require this header on POST /wa-inbox/api/record-message/ (bot pushing to CRM).
 # WA_INBOX_API_KEY = "your-secret-key"

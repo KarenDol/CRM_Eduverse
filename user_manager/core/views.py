@@ -37,13 +37,14 @@ def home(request):
     )
 
     # Extract clients (optional, but convenient)
+    # Client model: no user_id (removed in 0013), no results field
     clients_data = [
         {
             **model_to_dict(d.client, fields=[
-                "id", "participant_id", "user_id", "first_name", "last_name", "email",
-                "phone", "grade", "school", "countryId", "results", "note"
+                "id", "participant_id", "first_name", "last_name", "email",
+                "phone", "grade", "school", "countryId", "note"
             ]),
-            "status": d.status,  
+            "status": d.status,
         }
         for d in deals
     ]
@@ -68,6 +69,9 @@ def login_user(request):
                 request.session.set_expiry(1209600)  # 2 weeks in seconds
             else:
                 request.session.set_expiry(0)
+            next_url = request.GET.get("next", "").strip()
+            if next_url and next_url.startswith("/"):
+                return redirect(next_url)
             return redirect('home')
         else:
             return redirect('login_user')
@@ -539,6 +543,7 @@ def edit_product(request, product_id):
         }
     })
 
+
 @csrf_exempt
 @require_POST
 def add_clients(request):
@@ -597,17 +602,16 @@ def add_clients(request):
             client = Client.objects.filter(participant_id=participant_id).first()
             if not client:
                 client = Client.objects.create(
+                    participant_id=int(participant_id),
                     first_name=registrant_card.get('name', ''),
                     last_name=registrant_card.get('surname', ''),
                     email=registrant_card.get('email', ''),
                     phone=formatted_phone,
                     grade=registrant_card.get('grade', ''),
+                    school=registrant_card.get('school', ''),
                     countryId=registrant_card.get('countryId'),
                 )
                 created_clients += 1
-            elif registrant_card.get('userId') is not None and (client.user_id is None or client.user_id != registrant_card.get('userId')):
-                client.user_id = registrant_card.get('userId')
-                client.save(update_fields=['user_id'])
 
             deal = Deal.objects.filter(product=product, client=client).first()
             if deal:

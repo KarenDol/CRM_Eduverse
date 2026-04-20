@@ -54,13 +54,20 @@ MESSAGE_STATUS_CHOICES = [
 class Contact(models.Model):
     """
     WhatsApp contact / conversation. One contact = one WhatsApp chat.
-    Stores conversation-level state: status, department, priority, SLA, etc.
+    Stores conversation-level state: status, assigned_to (CRM user), priority, SLA, etc.
     """
     phone = models.CharField(max_length=20, unique=True, db_index=True)
     name = models.CharField(max_length=255, blank=True)
     tags = models.JSONField(default=list, help_text="List of tag strings")
     status = models.CharField(max_length=32, choices=STATUS_CHOICES, default="NEW_LEAD")
     department = models.CharField(max_length=32, choices=DEPARTMENT_CHOICES, default="MANAGER_DANA")
+    assigned_to = models.ForeignKey(
+        "core.CRM_User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="wa_inbox_contacts",
+    )
     priority = models.CharField(max_length=8, choices=PRIORITY_CHOICES, default="MED")
     last_message = models.TextField(blank=True)
     last_message_at = models.DateTimeField(null=True, blank=True)
@@ -114,3 +121,66 @@ class Message(models.Model):
 
     def __str__(self):
         return f"{self.direction} to {self.contact.phone}: {self.text[:50]}..."
+
+
+class Note(models.Model):
+    """
+    Internal note on a Contact (conversation). Not sent to the client.
+    """
+    contact = models.ForeignKey(
+        Contact,
+        on_delete=models.CASCADE,
+        related_name="notes",
+    )
+    creator = models.ForeignKey(
+        "core.CRM_User",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="wa_inbox_notes",
+    )
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Internal Note"
+        verbose_name_plural = "Internal Notes"
+
+    def __str__(self):
+        return f"Note on {self.contact.phone}: {self.content[:50]}..."
+
+
+HISTORY_EVENT_TYPES = [
+    ("CREATED", "Created"),
+    ("ASSIGNED", "Assigned"),
+    ("TRANSFERRED", "Transferred"),
+    ("STATUS_CHANGED", "Status changed"),
+    ("CLOSED", "Closed"),
+    ("REOPENED", "Reopened"),
+    ("NOTE_ADDED", "Note added"),
+    ("TAG_CHANGED", "Tags changed"),
+]
+
+
+class ContactHistory(models.Model):
+    """
+    Audit log for a contact: status changes, assignments, notes, tags, etc.
+    """
+    contact = models.ForeignKey(
+        Contact,
+        on_delete=models.CASCADE,
+        related_name="history",
+    )
+    event_type = models.CharField(max_length=32, choices=HISTORY_EVENT_TYPES)
+    actor = models.CharField(max_length=255, blank=True)
+    description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Contact history event"
+        verbose_name_plural = "Contact history"
+
+    def __str__(self):
+        return f"{self.event_type} on {self.contact.phone} at {self.created_at}"
